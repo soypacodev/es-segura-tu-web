@@ -8,6 +8,7 @@
 // cuando se ha leído la página entera.
 
 import type { CapturaSitio, Hallazgo, RespuestaCapturada } from '../tipos';
+import { enlacesDe } from './html';
 
 /** Servicios de analítica, publicidad y seguimiento muy extendidos, por el dominio desde el que se cargan. */
 const RASTREADORES: readonly { nombre: string; dominios: readonly string[] }[] = [
@@ -81,17 +82,12 @@ export function usaFuentesDeGoogle(html: string): boolean {
   return /fonts\.(googleapis|gstatic)\.com/i.test(html);
 }
 
-/** Enlaces de la página: dirección y texto visible (sin etiquetas). */
-export function enlacesDeLaPagina(html: string): { href: string; texto: string }[] {
-  const enlaces: { href: string; texto: string }[] = [];
-  for (const m of html.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi)) {
-    const href = /\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i.exec(m[1]);
-    enlaces.push({ href: href?.[1] ?? href?.[2] ?? href?.[3] ?? '', texto: m[2].replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() });
-  }
-  return enlaces;
+/** «sí» si algún enlace encaja, «no» si ninguno, «no se sabe» si hubo demasiados enlaces para mirarlos todos. */
+function buscarEnlace(html: string, patron: RegExp): 'si' | 'no' | 'no-se-sabe' {
+  const { enlaces, completo } = enlacesDe(html);
+  if (enlaces.some((e) => patron.test(e.texto) || patron.test(safe(e.href)))) return 'si';
+  return completo ? 'no' : 'no-se-sabe';
 }
-
-const hayEnlace = (html: string, patron: RegExp) => enlacesDeLaPagina(html).some((e) => patron.test(e.texto) || patron.test(decodeURIComponent(safe(e.href))));
 
 function safe(s: string): string {
   try {
@@ -136,8 +132,9 @@ function comprobarFuentes(r: RespuestaCapturada): Hallazgo {
 
 function comprobarEnlaceLegal(r: RespuestaCapturada, id: string, patron: RegExp, gravedad: Hallazgo['gravedad'], peso: number): Hallazgo {
   if (r.cuerpo === null) return h(id, 'no-aplica', gravedad, peso);
-  if (hayEnlace(r.cuerpo, patron)) return h(id, 'correcto', gravedad, peso);
-  return paginaCompleta(r) ? h(id, 'mejorable', gravedad, peso) : h(id, 'no-aplica', gravedad, peso);
+  const hay = buscarEnlace(r.cuerpo, patron);
+  if (hay === 'si') return h(id, 'correcto', gravedad, peso);
+  return hay === 'no' && paginaCompleta(r) ? h(id, 'mejorable', gravedad, peso) : h(id, 'no-aplica', gravedad, peso);
 }
 
 export function comprobarPrivacidad(captura: CapturaSitio): Hallazgo[] {

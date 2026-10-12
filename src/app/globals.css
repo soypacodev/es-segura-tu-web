@@ -333,19 +333,23 @@ p {
   font-family: var(--letra-titulo);
   font-weight: 800;
   font-size: 1.5rem;
-  color: var(--sobre-nota);
+  background: var(--c);
+  color: var(--l, var(--sobre-nota));
   clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 50%, calc(100% - 22px) 100%, 0 100%);
-  transition: opacity 0.25s;
+  transition: background-color 0.25s;
 }
 
+/* Las filas que no son la nota se apagan aclarando el color de la barra, no el texto: la letra mantiene su contraste. */
 .escala--atenuada .escala__barra {
-  opacity: 0.35;
+  background: color-mix(in srgb, var(--c) 35%, var(--fondo));
+  color: var(--tinta);
 }
 
 .escala--atenuada .escala__fila--activa .escala__barra,
 .escala--atenuada .escala__fila--simulada .escala__barra,
 .escala--atenuada .escala__fila--escaneando .escala__barra {
-  opacity: 1;
+  background: var(--c);
+  color: var(--l, var(--sobre-nota));
 }
 
 .escala__marca {
@@ -380,17 +384,17 @@ p {
   color: var(--accion);
 }
 
-.escala__fila--a-plus .escala__barra { width: 52%; background: var(--nota-aplus); color: #fff; }
-.escala__fila--a .escala__barra { width: 62%; background: var(--nota-a); }
-.escala__fila--b .escala__barra { width: 72%; background: var(--nota-b); }
-.escala__fila--c .escala__barra { width: 82%; background: var(--nota-c); }
-.escala__fila--d .escala__barra { width: 91%; background: var(--nota-d); }
-.escala__fila--f .escala__barra { width: 100%; background: var(--nota-f); color: #fff; }
+.escala__fila--a-plus .escala__barra { width: 52%; --c: var(--nota-aplus); --l: #fff; }
+.escala__fila--a .escala__barra { width: 62%; --c: var(--nota-a); }
+.escala__fila--b .escala__barra { width: 72%; --c: var(--nota-b); }
+.escala__fila--c .escala__barra { width: 82%; --c: var(--nota-c); }
+.escala__fila--d .escala__barra { width: 91%; --c: var(--nota-d); }
+.escala__fila--f .escala__barra { width: 100%; --c: var(--nota-f); --l: #fff; }
 
 @media (prefers-color-scheme: dark) {
   .escala__fila--a-plus .escala__barra,
   .escala__fila--f .escala__barra {
-    color: #08102a;
+    --l: #08102a;
   }
 }
 
@@ -1211,5 +1215,16 @@ p {
 @media (prefers-reduced-motion: no-preference) {
   .parada__nodo .fila__estado {
     transition: transform 0.25s ease;
+  }
+}
+
+/* Con la barra del simulador abierta, lo que recibe el foco con el teclado no puede quedar tapado por ella. */
+html:has(.barra-simulador) {
+  scroll-padding-bottom: 120px;
+}
+
+@media (max-width: 560px) {
+  html:has(.barra-simulador) {
+    scroll-padding-bottom: 190px;
   }
 }

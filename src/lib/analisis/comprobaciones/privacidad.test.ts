@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { bien, respuesta, sitio } from '../pruebas/construir';
 import type { EstadoCuerpo } from '../tipos';
-import { avisoDeCookies, comprobarPrivacidad, enlacesDeLaPagina, rastreadoresEnHtml, usaFuentesDeGoogle } from './privacidad';
+import { enlacesDe } from './html';
+import { avisoDeCookies, comprobarPrivacidad, rastreadoresEnHtml, usaFuentesDeGoogle } from './privacidad';
 
 const PIE = '<a href="/privacidad">Política de privacidad</a><a href="/aviso-legal">Aviso legal</a>';
 const con = (html: string, estadoCuerpo: EstadoCuerpo = 'completo') =>
@@ -48,10 +49,13 @@ describe('usaFuentesDeGoogle', () => {
 
 describe('enlacesDeLaPagina', () => {
   it('lee dirección y texto sin etiquetas interiores', () => {
-    expect(enlacesDeLaPagina(`<a class="x" href='/priv'><span>Política</span>  de\n privacidad</a><a>sin href</a>`)).toEqual([
-      { href: '/priv', texto: 'Política de privacidad' },
-      { href: '', texto: 'sin href' },
-    ]);
+    expect(enlacesDe(`<a class="x" href='/priv'><span>Política</span>  de\n privacidad</a><a>sin href</a>`)).toEqual({
+      enlaces: [
+        { href: '/priv', texto: 'Política de privacidad' },
+        { href: '', texto: 'sin href' },
+      ],
+      completo: true,
+    });
   });
 });
 

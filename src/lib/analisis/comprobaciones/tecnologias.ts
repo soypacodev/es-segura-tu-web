@@ -5,6 +5,7 @@
 // sí misma, se diga o no. Solo se mira lo que la web declara: no se adivina.
 
 import type { CapturaSitio, Hallazgo, RespuestaCapturada } from '../tipos';
+import { etiquetasDe } from './html';
 import { valorCabecera } from './utiles';
 
 const h = (id: string, resultado: Hallazgo['resultado'], gravedad: Hallazgo['gravedad'], peso: number, datos?: Hallazgo['datos']): Hallazgo => ({
@@ -106,14 +107,13 @@ function comprobarCabecerasDeTecnologia(r: RespuestaCapturada): Hallazgo {
 // <meta name="generator">
 // ------------------------------------------------------------------
 
+const SOLO_META = new Set(['meta']);
+
 /** Lo que dice la etiqueta «generator» de la página (WordPress, Joomla, Drupal…), si existe. */
 export function generadorDeLaPagina(html: string): string | null {
-  for (const etiqueta of html.matchAll(/<meta\b[^>]*>/gi)) {
-    const texto = etiqueta[0];
-    const nombre = /\bname\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i.exec(texto);
-    if ((nombre?.[1] ?? nombre?.[2] ?? nombre?.[3] ?? '').toLowerCase() !== 'generator') continue;
-    const contenido = /\bcontent\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i.exec(texto);
-    const valor = contenido?.[1] ?? contenido?.[2] ?? contenido?.[3];
+  for (const meta of etiquetasDe(html, SOLO_META)) {
+    if ((meta.atributos['name'] ?? '').toLowerCase() !== 'generator') continue;
+    const valor = meta.atributos['content'];
     if (valor) return valor.trim();
   }
   return null;
