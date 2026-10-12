@@ -32,6 +32,8 @@ describe('analizarSitio · camino feliz', () => {
     expect(i.nota.categorias).toEqual([
       { id: 'https', puntos: 100 },
       { id: 'cabeceras', puntos: 100 },
+      { id: 'cookies', puntos: 100 },
+      { id: 'tecnologias', puntos: 100 },
     ]);
   });
 
@@ -58,18 +60,33 @@ describe('analizarSitio · camino feliz', () => {
 });
 
 describe('analizarSitio · notas realistas (cuentas hechas a mano)', () => {
-  it('sin HSTS: (89 − 12) / 89 = 87 → B', async () => {
+  it('sin HSTS: (104 − 12) / 104 = 88 → B', async () => {
     const sinHsts = respuesta({ cabeceras: { ...respuesta().cabeceras, 'strict-transport-security': [] } });
     delete sinHsts.cabeceras['strict-transport-security'];
     const i = await informe('ejemplo.com', bien(sinHsts));
-    expect(i.nota).toMatchObject({ puntos: 87, letra: 'B' });
+    expect(i.nota).toMatchObject({ puntos: 88, letra: 'B' });
   });
 
-  it('sin política CSP (que también deja sin protección contra clickjacking): (91 − 14 − 6) / 91 = 78 → C', async () => {
+  it('sin política CSP (que también deja sin protección contra clickjacking): (106 − 14 − 6) / 106 = 81 → B', async () => {
     const base = respuesta();
     delete base.cabeceras['content-security-policy'];
     const i = await informe('ejemplo.com', bien(base));
-    expect(i.nota).toMatchObject({ puntos: 78, letra: 'C' });
+    expect(i.nota).toMatchObject({ puntos: 81, letra: 'B' });
+  });
+
+  it('web antigua con PHP 7.4 y una cookie de sesión sin proteger: (125 − 8 − 8 − 6 − 1,5 − 1,5) / 125 = 80 → B (la cabecera que anuncia «PHP/7.4.3» también resta medio punto de 3)', async () => {
+    const r = respuesta({ cabeceras: { ...respuesta().cabeceras, 'x-powered-by': ['PHP/7.4.3'], 'set-cookie': ['PHPSESSID=abc; Path=/'] } });
+    const i = await informe('ejemplo.com', bien(r));
+    expect(i.nota).toMatchObject({ puntos: 80, letra: 'B', techo: null });
+    const por = (id: string) => i.hallazgos.find((x) => x.id === id)?.resultado;
+    expect([por('tecnologias.php'), por('tecnologias.cabecera'), por('cookies.secure'), por('cookies.httponly'), por('cookies.samesite')]).toEqual([
+      'fallo',
+      'mejorable',
+      'fallo',
+      'fallo',
+      'mejorable',
+    ]);
+    expect(i.nota.categorias.find((c) => c.id === 'cookies')?.puntos).toBe(Math.round((100 * 1.5) / 17));
   });
 
   it('certificado caducado: la letra se queda en D por mucho que lo demás vaya bien', async () => {

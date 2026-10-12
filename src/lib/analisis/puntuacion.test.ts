@@ -40,10 +40,14 @@ describe('calcularNota · puntos', () => {
     expect(nota.categorias).toEqual([
       { id: 'https', puntos: 100 },
       { id: 'cabeceras', puntos: 0 },
+      { id: 'cookies', puntos: null },
+      { id: 'tecnologias', puntos: null },
     ]);
     expect(calcularNota([h('a', 'correcto', 10)]).categorias).toEqual([
       { id: 'https', puntos: 100 },
       { id: 'cabeceras', puntos: null },
+      { id: 'cookies', puntos: null },
+      { id: 'tecnologias', puntos: null },
     ]);
   });
 });

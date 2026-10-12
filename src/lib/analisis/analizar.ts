@@ -5,6 +5,8 @@
 // a internet; en las pruebas se le pasa uno falso y no hay red.
 
 import { comprobarCabeceras } from './comprobaciones/cabeceras';
+import { comprobarCookies } from './comprobaciones/cookies';
+import { comprobarTecnologias } from './comprobaciones/tecnologias';
 import { comprobarHttps } from './comprobaciones/https';
 import type { Descargador, OpcionesDescarga } from './descarga';
 import { normalizarObjetivo, type MotivoObjetivo } from './objetivo';
@@ -105,7 +107,13 @@ export async function analizarSitio(entrada: string, dependencias: DependenciasA
   if (error) return { ok: false, error };
 
   const captura: CapturaSitio = { host, https, http };
-  const hallazgos = [...comprobarHttps(captura, ahora()), ...comprobarCabeceras(captura)];
+  const momento = ahora();
+  const hallazgos = [
+    ...comprobarHttps(captura, momento),
+    ...comprobarCabeceras(captura),
+    ...comprobarCookies(captura),
+    ...comprobarTecnologias(captura, momento),
+  ];
 
   return {
     ok: true,
@@ -115,7 +123,7 @@ export async function analizarSitio(entrada: string, dependencias: DependenciasA
       nota: calcularNota(hallazgos),
       hallazgos,
       avisos: avisosDe(captura, OPCIONES_HTTPS.maxBytes),
-      analizadoEn: ahora().toISOString(),
+      analizadoEn: momento.toISOString(),
       duracionMs: Math.round(performance.now() - inicio),
     },
   };
