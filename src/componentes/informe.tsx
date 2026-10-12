@@ -92,11 +92,21 @@ function BotonCopiar({ texto }: { texto: string }) {
   );
 }
 
-function Fila({ hallazgo, marcado, alternar }: { hallazgo: Hallazgo; marcado: boolean; alternar: (id: string) => void }) {
+function Fila({
+  hallazgo,
+  marcado,
+  alternar,
+  conCasilla,
+}: {
+  hallazgo: Hallazgo;
+  marcado: boolean;
+  alternar: (id: string) => void;
+  conCasilla: boolean;
+}) {
   const [abierta, setAbierta] = useState(false);
   const idDetalle = useId();
   const texto = textoDeHallazgo(hallazgo);
-  const arreglable = sePuedeArreglar(hallazgo);
+  const arreglable = sePuedeArreglar(hallazgo) && conCasilla;
 
   return (
     <li className="fila">
@@ -155,6 +165,8 @@ export function InformeVisual({ informe, arreglados, alAlternar, alMarcarVarios,
     .filter((g) => g.filas.length > 0);
 
   const hayCambio = arreglados.size > 0;
+  const idsUrgentes = new Set(urgentes.map((h) => h.id));
+  const notaAlta = nota.letra === 'A+' || nota.letra === 'A';
 
   return (
     <div className="informe">
@@ -196,12 +208,14 @@ export function InformeVisual({ informe, arreglados, alAlternar, alMarcarVarios,
 
       <section aria-labelledby="titulo-urgente">
         <h2 id="titulo-urgente" className="seccion__titulo">
-          {urgentes.length > 0 ? 'Empieza por esto' : 'No hay nada urgente'}
+          {urgentes.length === 0 ? 'No hay nada urgente' : notaAlta ? 'Lo único que falta' : 'Empieza por esto'}
         </h2>
         {urgentes.length > 0 ? (
           <>
             <p className="seccion__texto">
-              Son las mejoras que más suben la nota. Marca «Lo arreglaría» y mira cómo cambia la escala.
+              {notaAlta
+                ? 'Tu web ya está muy bien. Esto es lo que queda para llegar al 100. Marca «Lo arreglaría» y mira cómo cambia la nota.'
+                : 'Son las mejoras que más suben la nota. Marca «Lo arreglaría» y mira cómo cambia la escala.'}
             </p>
             <ol className="urgentes">
               {urgentes.map((h) => {
@@ -243,7 +257,7 @@ export function InformeVisual({ informe, arreglados, alAlternar, alMarcarVarios,
         <h2 id="titulo-todo" className="seccion__titulo">
           Todo lo que hemos revisado
         </h2>
-        <p className="seccion__texto">Pulsa en cualquiera para ver qué significa y cómo se arregla.</p>
+        <p className="seccion__texto">Pulsa en cualquiera para ver qué significa y cómo se arregla.{urgentes.length > 0 && ' Lo que ya aparece arriba se marca allí.'}</p>
         {grupos.map((g) => (
           <div className="grupo" key={g.id}>
             <h3 className="grupo__titulo">
@@ -252,7 +266,7 @@ export function InformeVisual({ informe, arreglados, alAlternar, alMarcarVarios,
             </h3>
             <ul className="filas">
               {g.filas.map((h) => (
-                <Fila key={h.id} hallazgo={h} marcado={arreglados.has(h.id)} alternar={alAlternar} />
+                <Fila key={h.id} hallazgo={h} marcado={arreglados.has(h.id)} alternar={alAlternar} conCasilla={!idsUrgentes.has(h.id)} />
               ))}
             </ul>
           </div>
@@ -285,8 +299,10 @@ export function InformeVisual({ informe, arreglados, alAlternar, alMarcarVarios,
             </svg>
             <span className="letra-chip" data-nota={simulada.letra} aria-label={`Con tus arreglos ${simulada.letra}`}>{simulada.letra}</span>
             <span>
-              {nota.puntos} → {simulada.puntos} puntos
-              <span className="barra-simulador__texto"> · {arreglados.size === 1 ? '1 arreglo marcado' : `${arreglados.size} arreglos marcados`}. Es una estimación.</span>
+              {nota.puntos} a {simulada.puntos} puntos
+              <span className="barra-simulador__texto">
+                {arreglados.size === 1 ? '1 arreglo marcado' : `${arreglados.size} arreglos marcados`}. Es una estimación.
+              </span>
             </span>
           </div>
           <button type="button" className="boton boton--claro" onClick={alLimpiar}>

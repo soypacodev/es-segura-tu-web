@@ -29,6 +29,14 @@
   --nota-f: #d3362b;
   --sobre-nota: #101a33;
 
+  /* El panel de la nota es siempre azul noche: sus colores de nota son los claros en los dos modos. */
+  --panel-nota-aplus: #2fbf8f;
+  --panel-nota-a: #4cc47e;
+  --panel-nota-b: #a8d14a;
+  --panel-nota-c: #f0bd1d;
+  --panel-nota-d: #f28a3f;
+  --panel-nota-f: #f2594d;
+
   --letra-titulo: 'Bricolage Grotesque Variable', 'Arial Narrow', system-ui, sans-serif;
   --letra-texto: 'Atkinson Hyperlegible Next Variable', system-ui, sans-serif;
   --letra-codigo: ui-monospace, 'Cascadia Code', Consolas, monospace;
@@ -690,11 +698,12 @@ p {
   font-size: 0.95rem;
   white-space: nowrap;
   padding: 6px 4px;
+  min-height: 44px;
 }
 
 .simula__casilla {
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   accent-color: var(--accion);
   margin: 0;
   cursor: pointer;
@@ -898,6 +907,7 @@ p {
 }
 
 .barra-simulador__texto {
+  display: block;
   color: var(--panel-suave);
   font-size: 0.92rem;
   font-weight: 400;
@@ -938,24 +948,30 @@ p {
 .boton--enlace {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  height: auto;
+  min-height: 56px;
+  padding-block: 12px;
+  text-align: center;
   text-decoration: none;
+  white-space: normal;
 }
 
 /* ---------- Pantallas pequeñas ---------- */
 
 @media (max-width: 860px) {
   .portada {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 32px;
     padding-block: 28px;
   }
   .panel-nota {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     justify-items: start;
     padding: 24px;
   }
   .contrata {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     padding: 24px;
   }
 }
@@ -963,6 +979,10 @@ p {
 @media (max-width: 560px) {
   .formulario__fila {
     flex-direction: column;
+  }
+  .formulario__campo {
+    flex: none;
+    width: 100%;
   }
   .boton {
     width: 100%;
@@ -992,6 +1012,23 @@ p {
   }
   .urgente::before {
     font-size: 1.7rem;
+  }
+  .barra-simulador {
+    bottom: 8px;
+    padding: 10px 12px;
+    gap: 10px;
+  }
+  .barra-simulador__cambio {
+    gap: 8px;
+    font-size: 1rem;
+  }
+  .barra-simulador__texto {
+    display: block;
+  }
+  .letra-chip {
+    min-width: 40px;
+    height: 40px;
+    font-size: 1.35rem;
   }
   .anillo {
     width: 170px;

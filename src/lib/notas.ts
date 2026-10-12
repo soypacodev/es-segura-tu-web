@@ -5,4 +5,5 @@ export const LETRAS_DE_MEJOR_A_PEOR: readonly Letra[] = ['A+', 'A', 'B', 'C', 'D
 
 export const claseDeLetra = (letra: Letra) => (letra === 'A+' ? 'a-plus' : letra.toLowerCase());
 
-export const colorDeLetra = (letra: Letra) => `var(--nota-${letra === 'A+' ? 'aplus' : letra.toLowerCase()})`;
+/** Color de la letra sobre el panel azul noche (siempre oscuro, también en modo claro). */
+export const colorDeLetra = (letra: Letra) => `var(--panel-nota-${letra === 'A+' ? 'aplus' : letra.toLowerCase()})`;
