@@ -561,11 +561,56 @@ p {
   font-size: 0.98rem;
 }
 
-.categorias {
+.zona-categorias {
   margin-top: 22px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 24px 36px;
+}
+
+.categorias {
   display: grid;
   gap: 12px;
+  flex: 1 1 280px;
   max-width: 460px;
+  min-width: 0;
+}
+
+.radar {
+  flex: 0 1 340px;
+  width: 340px;
+  max-width: 100%;
+  height: auto;
+}
+
+.radar__anillo {
+  fill: none;
+  stroke: var(--panel-2);
+  stroke-width: 1.5;
+}
+
+.radar__eje {
+  stroke: var(--panel-2);
+  stroke-width: 1.5;
+}
+
+.radar__texto {
+  fill: var(--panel-suave);
+  font-family: var(--letra-texto);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.radar__datos {
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: scale(0);
+  transition: transform 1.1s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.radar__datos--lleno {
+  transform: scale(1);
 }
 
 .categoria__cabecera {

@@ -7,6 +7,7 @@ import { colorDeLetra } from '@/lib/notas';
 import { ordenarPorUrgencia, sePuedeArreglar, simular } from '@/lib/simulacion';
 import { CATEGORIAS, GRAVEDAD, VEREDICTO, textoDeAviso, textoDeHallazgo, textoDeTecho } from '@/lib/textos/es';
 import { Anillo } from './anillo';
+import { Radar } from './radar';
 
 interface Props {
   informe: Informe;
@@ -179,19 +180,22 @@ export function InformeVisual({ informe, arreglados, alAlternar, alMarcarVarios,
           <p className="panel-nota__host">{informe.objetivo.host}</p>
           <p className="panel-nota__texto">{veredicto.texto}</p>
           {nota.techo && <p className="panel-nota__techo">{textoDeTecho(nota.techo.id, nota.techo.letra)}</p>}
-          <div className="categorias">
-            {nota.categorias.map((c) => (
-              <div key={c.id}>
-                <div className="categoria__cabecera">
-                  <span>{CATEGORIAS[c.id].nombre}</span>
-                  <span className="categoria__valor">{c.puntos === null ? '—' : `${c.puntos}/100`}</span>
+          <div className="zona-categorias">
+            <div className="categorias">
+              {nota.categorias.map((c) => (
+                <div key={c.id}>
+                  <div className="categoria__cabecera">
+                    <span>{CATEGORIAS[c.id].nombre}</span>
+                    <span className="categoria__valor">{c.puntos === null ? '—' : `${c.puntos}/100`}</span>
+                  </div>
+                  <div className="categoria__pista" aria-hidden="true">
+                    <div className="categoria__relleno" style={{ width: `${c.puntos ?? 0}%`, background: colorDeLetra(nota.letra) }} />
+                  </div>
+                  <p className="categoria__descripcion">{CATEGORIAS[c.id].descripcion}</p>
                 </div>
-                <div className="categoria__pista" aria-hidden="true">
-                  <div className="categoria__relleno" style={{ width: `${c.puntos ?? 0}%`, background: colorDeLetra(nota.letra) }} />
-                </div>
-                <p className="categoria__descripcion">{CATEGORIAS[c.id].descripcion}</p>
-              </div>
-            ))}
+              ))}
+            </div>
+            <Radar categorias={nota.categorias} color={colorDeLetra(nota.letra)} />
           </div>
         </div>
       </section>

@@ -30,6 +30,19 @@ export interface TextoHallazgo {
 const num = (d: Datos, k: string): number | null => (typeof d[k] === 'number' ? (d[k] as number) : null);
 const txt = (d: Datos, k: string): string | null => (typeof d[k] === 'string' ? (d[k] as string) : null);
 
+/** «Falta la marca en: sesion, preferencias y 2 más», a partir de los datos del hallazgo. */
+function listaCookies(d: Datos): string {
+  const nombres = Array.isArray(d['sin']) ? (d['sin'] as string[]) : [];
+  const mas = num(d, 'mas') ?? 0;
+  if (nombres.length === 0) return 'Alguna cookie';
+  const base = nombres.map((n) => `«${n}»`);
+  const texto = base.length === 1 ? base[0] : `${base.slice(0, -1).join(', ')} y ${base[base.length - 1]}`;
+  const extra = mas > 0 ? ` y ${mas} más` : '';
+  return nombres.length === 1 && mas === 0 ? `La cookie ${texto}` : `Las cookies ${texto}${extra}`;
+}
+
+const fechaLarga = (iso: string) => new Date(`${iso}T12:00:00Z`).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+
 const dias = (n: number) => (n === 1 ? '1 día' : `${n} días`);
 const segundosADias = (s: number) => Math.round(s / 86_400);
 
@@ -172,6 +185,64 @@ export const TEXTOS: Record<string, TextoHallazgo> = {
     arreglo: 'Añade la cabecera Permissions-Policy desactivando lo que tu web no usa.',
     codigo: 'Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()',
   },
+  'cookies.ninguna': {
+    titulo: 'Tu web no guarda cookies al entrar',
+    correcto: 'Al visitar la página principal no se guarda ninguna cookie en el navegador del visitante: nada que proteger y nada que avisar.',
+    noAplica: 'Se valora solo cuando la web no guarda cookies.',
+  },
+  'cookies.secure': {
+    titulo: 'Las cookies solo viajan por conexión cifrada',
+    correcto: (d) => `Las cookies que guarda tu web (${num(d, 'total') ?? 0}) llevan la marca «Secure»: el navegador nunca las envía sin cifrar.`,
+    fallo: (d) => `${listaCookies(d)} no lleva la marca «Secure». Si alguien visita una página sin cifrar, el navegador las envía a la vista de cualquiera en la misma red.`,
+    noAplica: 'No hay cookies que valorar.',
+    arreglo: 'Añade «Secure» a todas las cookies. En el código de tu web suele ser una opción al crear la cookie; en WordPress y otros gestores, un ajuste o un plugin de seguridad.',
+    codigo: 'Set-Cookie: sesion=...; Secure; HttpOnly; SameSite=Lax',
+  },
+  'cookies.httponly': {
+    titulo: 'Las cookies de sesión no las puede leer un script',
+    correcto: 'Las cookies que identifican a un usuario llevan «HttpOnly»: ningún script de la página puede leerlas, ni siquiera uno malicioso.',
+    fallo: (d) => `${listaCookies(d)} parece una cookie de sesión y no lleva «HttpOnly». Si alguien consigue ejecutar un script en tu web, puede robar la sesión del usuario.`,
+    noAplica: 'No hay cookies de sesión que valorar.',
+    arreglo: 'Añade «HttpOnly» a las cookies de sesión y de acceso. Solo deben quedarse sin él las que tu propio JavaScript necesite leer.',
+    codigo: 'Set-Cookie: sesion=...; Secure; HttpOnly; SameSite=Lax',
+  },
+  'cookies.samesite': {
+    titulo: 'Las cookies indican cuándo pueden enviarse desde otras webs',
+    correcto: 'Las cookies declaran su política «SameSite», lo que ayuda a frenar los engaños en los que otra web hace peticiones en nombre del usuario.',
+    mejorable: (d) => `${listaCookies(d)} no declara «SameSite». Los navegadores modernos aplican «Lax» por su cuenta, pero es mejor decirlo tú.`,
+    noAplica: 'No hay cookies que valorar.',
+    arreglo: 'Añade «SameSite=Lax» (o «Strict» si tu web lo permite) a las cookies.',
+    codigo: 'Set-Cookie: sesion=...; Secure; HttpOnly; SameSite=Lax',
+  },
+  'tecnologias.php': {
+    titulo: 'La versión de PHP sigue recibiendo parches',
+    correcto: (d) => `Tu web declara PHP ${txt(d, 'version') ?? ''}, una versión que todavía recibe parches de seguridad.`,
+    fallo: (d) =>
+      `Tu web declara PHP ${txt(d, 'version') ?? ''}${txt(d, 'fin') ? `, que dejó de recibir parches el ${fechaLarga(txt(d, 'fin') as string)}` : ', una versión que ya no recibe parches'}. Cada fallo que se descubre desde entonces queda sin arreglar.`,
+    noAplica: 'No se ha detectado PHP, así que no se valora.',
+    arreglo: 'Pide a tu proveedor de alojamiento que cambie tu web a una versión de PHP actual (8.3 o superior). Suele ser un selector en el panel. Prueba antes que tu web y sus plugins funcionan con ella.',
+  },
+  'tecnologias.servidor': {
+    titulo: 'El servidor no cuenta su versión exacta',
+    correcto: 'El servidor no revela qué programa y qué versión usa.',
+    mejorable: (d) => `El servidor se presenta como «${txt(d, 'valor') ?? ''}». Con esa versión exacta, quien busque fallos conocidos sabe cuáles probar.`,
+    arreglo: 'Pide a tu proveedor que oculte la versión en la cabecera «Server». En nginx es «server_tokens off»; en Apache, «ServerTokens Prod».',
+    codigo: 'nginx:  server_tokens off;\nApache: ServerTokens Prod',
+  },
+  'tecnologias.cabecera': {
+    titulo: 'La web no anuncia con qué está hecha',
+    correcto: 'Las cabeceras no anuncian la tecnología ni la versión con las que está hecha tu web.',
+    mejorable: (d) => `La cabecera «${txt(d, 'cabecera') ?? 'X-Powered-By'}» dice «${txt(d, 'valor') ?? ''}». Es un rótulo que facilita buscar fallos concretos de esa versión.`,
+    arreglo: 'Quita esa cabecera. En PHP es «expose_php = Off»; en Express (Node), «app.disable("x-powered-by")»; en ASP.NET, quitarla del archivo de configuración. Tu proveedor puede hacerlo.',
+    codigo: 'PHP (php.ini): expose_php = Off',
+  },
+  'tecnologias.generador': {
+    titulo: 'La página no anuncia el gestor ni su versión',
+    correcto: 'El código de la página no anuncia qué gestor de contenidos ni qué versión usas.',
+    mejorable: (d) => `La página anuncia «${txt(d, 'valor') ?? ''}» en su código. Quien busque webs con una versión vulnerable la encuentra a la primera.`,
+    noAplica: 'No se ha podido leer el código de la página.',
+    arreglo: 'Quita la etiqueta «generator» (en WordPress, con un plugin de seguridad o una línea en el tema) y, sobre todo, mantén el gestor actualizado.',
+  },
 };
 
 export function textoDeHallazgo(h: Pick<Hallazgo, 'id' | 'resultado' | 'datos'>): {
@@ -212,9 +283,11 @@ export function textoDeHallazgo(h: Pick<Hallazgo, 'id' | 'resultado' | 'datos'>)
 // Categorías, gravedad, letras, avisos y errores
 // ------------------------------------------------------------------
 
-export const CATEGORIAS: Record<Categoria, { nombre: string; descripcion: string }> = {
-  https: { nombre: 'Conexión segura', descripcion: 'Cifrado, certificado y redirecciones' },
-  cabeceras: { nombre: 'Defensas del navegador', descripcion: 'Cabeceras que protegen a tus visitantes' },
+export const CATEGORIAS: Record<Categoria, { nombre: string; corto: string; descripcion: string }> = {
+  https: { nombre: 'Conexión segura', corto: 'Conexión', descripcion: 'Cifrado, certificado y redirecciones' },
+  cabeceras: { nombre: 'Defensas del navegador', corto: 'Defensas', descripcion: 'Cabeceras que protegen a tus visitantes' },
+  cookies: { nombre: 'Cookies', corto: 'Cookies', descripcion: 'Cómo se guardan en el navegador de tus visitantes' },
+  tecnologias: { nombre: 'Tecnologías expuestas', corto: 'Tecnologías', descripcion: 'Qué cuenta tu web sobre cómo está hecha' },
 };
 
 export const GRAVEDAD: Record<Gravedad, string> = {

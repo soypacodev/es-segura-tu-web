@@ -20,17 +20,20 @@ const comprobaciones = readdirSync(join(CARPETA, 'comprobaciones'))
   .map((f) => join(CARPETA, 'comprobaciones', f));
 
 describe('textos en español', () => {
-  const ids = idsDelMotor(comprobaciones, /'((?:https|cabeceras)\.[a-z]+(?:\.[a-z]+)*)'/g);
+  const ids = idsDelMotor(comprobaciones, /'((?:https|cabeceras|cookies|tecnologias)\.[a-z]+(?:\.[a-z]+)*)'/g);
 
   it('el motor emite hallazgos (la búsqueda de identificadores funciona)', () => {
-    expect(ids.length).toBeGreaterThanOrEqual(14);
+    expect(ids.length).toBeGreaterThanOrEqual(22);
   });
 
   it('hay texto para cada identificador que el motor puede emitir, y ninguno de sobra', () => {
     expect(Object.keys(TEXTOS).sort()).toEqual(ids);
   });
 
-  it.each(Object.keys(TEXTOS))('%s tiene explicación en cada resultado posible', (id) => {
+  /** Hallazgos que solo pueden salir bien o no aplicar: no hay nada que arreglar. */
+  const SOLO_BIEN = new Set(['cookies.ninguna']);
+
+  it.each(Object.keys(TEXTOS).filter((id) => !SOLO_BIEN.has(id)))('%s tiene explicación en cada resultado posible', (id) => {
     for (const resultado of ['correcto', 'mejorable', 'fallo'] as Resultado[]) {
       const t = textoDeHallazgo({ id, resultado });
       expect(t.titulo.length, `${id}/${resultado} título`).toBeGreaterThan(5);
@@ -41,8 +44,23 @@ describe('textos en español', () => {
     expect(textoDeHallazgo({ id, resultado: 'correcto' }).arreglo).toBeNull();
   });
 
+  it('lo que solo puede salir bien tiene su texto', () => {
+    expect(textoDeHallazgo({ id: 'cookies.ninguna', resultado: 'correcto' }).explicacion.length).toBeGreaterThan(20);
+  });
+
   it('los «no aplica» que el motor emite tienen texto', () => {
-    for (const id of ['https.certificado.caducidad', 'https.tls.version', 'https.hsts.subdominios', 'https.hsts.precarga']) {
+    for (const id of [
+      'https.certificado.caducidad',
+      'https.tls.version',
+      'https.hsts.subdominios',
+      'https.hsts.precarga',
+      'cookies.ninguna',
+      'cookies.secure',
+      'cookies.httponly',
+      'cookies.samesite',
+      'tecnologias.php',
+      'tecnologias.generador',
+    ]) {
       expect(textoDeHallazgo({ id, resultado: 'no-aplica' }).explicacion.length).toBeGreaterThan(10);
     }
   });
