@@ -78,6 +78,10 @@ export function avisoDeCookies(html: string): string | null {
   return AVISO_PROPIO.test(html) ? 'propio' : null;
 }
 
+/** Un servidor de seguimiento conocido (los de la lista de rastreadores): su código cambia a menudo y no admite SRI. */
+export const esServidorDeRastreo = (host: string) =>
+  RASTREADORES.some((r) => r.dominios.some((d) => host === d || host.endsWith(`.${d}`)));
+
 export function usaFuentesDeGoogle(html: string): boolean {
   return /fonts\.(googleapis|gstatic)\.com/i.test(html);
 }

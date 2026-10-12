@@ -195,6 +195,43 @@ export const TEXTOS: Record<string, TextoHallazgo> = {
     arreglo: 'Añade la cabecera Permissions-Policy desactivando lo que tu web no usa.',
     codigo: 'Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()',
   },
+  'contenido.mixto': {
+    titulo: 'Todo lo que carga tu página llega cifrado',
+    correcto: 'Todo lo que la página carga (scripts, estilos, imágenes, marcos) llega por conexión cifrada.',
+    mejorable: (d) =>
+      `La página carga sin cifrar contenido de ${listaNombres(d)} (imágenes o vídeo). Los navegadores suelen subirlo a HTTPS por su cuenta, pero si ese servidor no lo admite se verá roto, y quien esté en la red puede ver qué se descarga.`,
+    fallo: (d) =>
+      `La página carga sin cifrar scripts, estilos o marcos desde ${listaNombres(d)}. Los navegadores los bloquean, así que tu web puede verse rota, y quien esté en la misma red podría haberlos cambiado por otros.${(num(d, 'pasivos') ?? 0) > 0 ? ` Además carga sin cifrar imágenes o vídeo de ${num(d, 'pasivos')} ${num(d, 'pasivos') === 1 ? 'servidor' : 'servidores'}.` : ''}`,
+    noAplica: 'Se valora cuando la web se sirve por conexión cifrada y se pudo leer entera.',
+    arreglo:
+      'Cambia las direcciones «http://» por «https://» (o por rutas que empiecen por «/»). Si el otro servidor no admite HTTPS, busca otro proveedor o descarga el archivo y sírvelo desde tu web.',
+  },
+  'contenido.sri': {
+    titulo: 'Los archivos que cargas de otras webs llevan huella de integridad (SRI)',
+    correcto: 'No cargas scripts ni estilos de otras webs sin huella de integridad: si alguien los cambia, el navegador no los ejecuta.',
+    mejorable: (d) =>
+      `Cargas scripts o estilos de ${listaNombres(d)} sin huella de integridad (SRI). Si ese servidor lo cambian o lo comprometen, el navegador ejecutará el código nuevo sin avisar.`,
+    noAplica: 'No se pudo leer la página entera.',
+    arreglo:
+      'Añade el atributo «integrity» (y «crossorigin») a esas etiquetas. Los servicios que cambian su código a menudo, como los de analítica, no se pueden fijar así: úsalos solo si los necesitas.',
+    codigo: '<script src="https://cdn.ejemplo.com/libreria.js" integrity="sha384-HUELLA" crossorigin="anonymous"></script>',
+  },
+  'contenido.terceros': {
+    titulo: 'Tu web depende de pocos servidores ajenos',
+    correcto: 'Tu página ejecuta código de pocos servidores ajenos (cinco o menos). Cada uno puede cambiar lo que ocurre en tu web, así que cuantos menos, mejor.',
+    mejorable: (d) =>
+      `Tu página ejecuta código de ${num(d, 'total') ?? 0} servidores ajenos (${listaNombres(d)}). Cada uno puede cambiar lo que ocurre en tu web, y si uno se ve comprometido, tu web también.`,
+    noAplica: 'No se pudo leer la página entera.',
+    arreglo: 'Quita los servicios que ya no uses y, cuando puedas, aloja tú los archivos (librerías, tipografías) en vez de enlazarlos desde fuera.',
+  },
+  'contenido.formulario': {
+    titulo: 'Los formularios envían los datos cifrados',
+    correcto: 'Los formularios de la página envían sus datos por conexión cifrada.',
+    fallo: (d) =>
+      `Un formulario de la página envía sus datos a ${listaNombres(d)} sin cifrar. Lo que escriba el visitante, contraseñas incluidas, viaja a la vista de cualquiera en su misma red.`,
+    noAplica: 'La página principal no tiene formularios.',
+    arreglo: 'Cambia la dirección de envío del formulario a «https://» (o a una ruta que empiece por «/»).',
+  },
   'cookies.ninguna': {
     titulo: 'Tu web no guarda cookies al entrar',
     correcto: 'Al visitar la página principal no se guarda ninguna cookie en el navegador del visitante: nada que proteger y nada que avisar.',
@@ -390,6 +427,7 @@ export const CATEGORIAS: Record<Categoria, { nombre: string; corto: string; desc
   https: { nombre: 'Conexión segura', corto: 'Conexión', descripcion: 'Cifrado, certificado y redirecciones' },
   dns: { nombre: 'Dominio y correo', corto: 'Dominio', descripcion: 'Quién puede enviar correo como tú y emitir tus certificados' },
   cabeceras: { nombre: 'Defensas del navegador', corto: 'Defensas', descripcion: 'Cabeceras que protegen a tus visitantes' },
+  contenido: { nombre: 'Contenido de la página', corto: 'Contenido', descripcion: 'Qué carga tu página y de dónde' },
   cookies: { nombre: 'Cookies', corto: 'Cookies', descripcion: 'Cómo se guardan en el navegador de tus visitantes' },
   privacidad: { nombre: 'Privacidad y RGPD', corto: 'Privacidad', descripcion: 'Quién recibe datos de tus visitantes y qué les cuentas' },
   tecnologias: { nombre: 'Tecnologías expuestas', corto: 'Tecnologías', descripcion: 'Qué cuenta tu web sobre cómo está hecha' },
@@ -460,7 +498,7 @@ export const PARADAS_TEXTO: Record<IdParada, { nombre: string; detalle: string }
   direccion: { nombre: 'Alguien escribe tu dirección', detalle: 'Entra con http:// o sin nada delante.' },
   canal: { nombre: 'Se abre un canal cifrado', detalle: 'El certificado y la versión del cifrado.' },
   servidor: { nombre: 'Tu servidor responde', detalle: 'Lo que ordena al navegador y lo que cuenta de sí mismo.' },
-  navegador: { nombre: 'El navegador se defiende', detalle: 'Cabeceras que limitan lo que puede hacer la página.' },
+  navegador: { nombre: 'El navegador se defiende', detalle: 'Cabeceras y contenido que limitan lo que puede hacer la página.' },
   dominio: { nombre: 'Se busca tu dominio', detalle: 'Quién puede enviar correo como tú y emitir tus certificados.' },
   cookies: { nombre: 'Cookies y rastreadores', detalle: 'Qué se guarda en el equipo del visitante y quién más recibe datos.' },
 };
