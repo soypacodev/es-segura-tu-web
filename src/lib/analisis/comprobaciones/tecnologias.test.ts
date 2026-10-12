@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { AHORA, bien, respuesta, sitio } from '../pruebas/construir';
-import { FIN_DE_VIDA_PHP, comprobarTecnologias, generadorDeLaPagina, versionDePhp } from './tecnologias';
+import { FIN_DE_VIDA_PHP, MAX_SCRIPTS, comprobarTecnologias, generadorDeLaPagina, leerLibrerias, versionDePhp } from './tecnologias';
 
 const con = (cabeceras: Record<string, string[]> = {}, cuerpo?: string | null) =>
   sitio({ https: bien(respuesta({ cabeceras: { ...respuesta().cabeceras, ...cabeceras }, ...(cuerpo !== undefined ? { cuerpo } : {}) })) });
@@ -128,6 +128,98 @@ describe('comprobarTecnologias', () => {
       ['tecnologias.servidor', 'correcto'],
       ['tecnologias.cabecera', 'correcto'],
       ['tecnologias.generador', 'correcto'],
+      ['tecnologias.librerias', 'no-aplica'],
     ]);
+  });
+});
+
+const nombres = (html: string) => leerLibrerias(html).vistas.map((v) => `${v.nombre} ${v.version}${v.obsoleta ? ' !' : ''}`).sort();
+const scripts = (...src: string[]) => `<html><head>${src.map((s) => `<script src="${s}"></script>`).join('')}</head></html>`;
+
+describe('leerLibrerias', () => {
+  it.each([
+    ['/js/jquery-1.12.4.min.js', ['jQuery 1.12.4 !']],
+    ['https://code.jquery.com/jquery-3.4.1.min.js', ['jQuery 3.4.1 !']],
+    ['https://code.jquery.com/jquery-3.5.0.min.js', ['jQuery 3.5.0']],
+    ['https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js', ['jQuery 3.7.1']],
+    ['https://cdn.jsdelivr.net/npm/jquery@2.2.4/dist/jquery.min.js', ['jQuery 2.2.4 !']],
+    ['/wp-includes/js/jquery/jquery.min.js?ver=3.6.0', ['jQuery 3.6.0']],
+    ['/wp-includes/js/jquery/jquery.min.js?ver=1.12.4-wp', ['jQuery 1.12.4 !']],
+    ['https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js', ['Bootstrap 3.3.7 !']],
+    ['https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js', ['Bootstrap 3.4.1']],
+    ['/bootstrap-4.3.0.min.js', ['Bootstrap 4.3.0 !']],
+    ['/bootstrap-4.3.1.min.js', ['Bootstrap 4.3.1']],
+    ['/bootstrap-5.0.0.min.js', ['Bootstrap 5.0.0']],
+    ['https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js', ['AngularJS 1.8.2 !']],
+    ['/vendor/angular-1.5.8.min.js', ['AngularJS 1.5.8 !']],
+  ])('%s', (src, esperado) => expect(nombres(scripts(src))).toEqual(esperado));
+
+  it.each([
+    '/jquery.min.js', // sin versión
+    '/jquery-ui-1.12.1.min.js', // otra librería
+    '/jquery-migrate-3.0.0.min.js',
+    '/jquery.mobile-1.4.5.min.js',
+    '/bootstrap-icons/1.11.0/font.css',
+    '/bootstrap-select-1.13.0.js',
+    '/js/mijquery-1.2.3.js',
+    'https://cdn.jsdelivr.net/npm/@angular/core@16.0.0/index.js', // Angular moderno, no AngularJS
+    '/angular-material@1.2.0.js',
+    '/otra.js?ver=3.6.0', // el parámetro solo se mira en jquery(.min).js
+  ])('no confunde %s', (src) => expect(nombres(scripts(src))).toEqual([]));
+
+  it('solo la rama 1 de AngularJS está sin soporte', () => {
+    expect(nombres(scripts('/angular-2.0.0.js'))).toEqual(['AngularJS 2.0.0']);
+  });
+  it('mira también las hojas de estilo y no repite la misma librería', () => {
+    const html = '<link rel="stylesheet" href="/bootstrap-3.3.7.min.css"><script src="/bootstrap-3.3.7.min.js"></script>';
+    expect(nombres(html)).toEqual(['Bootstrap 3.3.7 !']);
+  });
+  it('varias versiones de la misma librería cuentan por separado', () => {
+    expect(nombres(scripts('/jquery-1.12.4.js', '/jquery-3.7.1.js'))).toEqual(['jQuery 1.12.4 !', 'jQuery 3.7.1']);
+  });
+  it('lee solo scripts y estilos con src o href, y tolera comillas simples y mayúsculas', () => {
+    expect(nombres(`<SCRIPT SRC='/JQuery-1.9.1.JS'></SCRIPT><img src="/jquery-1.2.3.png"><a href="/jquery-1.2.3.html">x</a>`)).toEqual(['jQuery 1.9.1 !']);
+  });
+  it('con más etiquetas de las que se leen avisa de que no es completo', () => {
+    const relleno = '<script src="/a.js"></script>'.repeat(MAX_SCRIPTS + 1);
+    expect(leerLibrerias(relleno).completo).toBe(false);
+    expect(leerLibrerias('<script src="/a.js"></script>'.repeat(MAX_SCRIPTS)).completo).toBe(true);
+  });
+  it('direcciones enormes y 1 MB hostil no tardan', () => {
+    for (const html of ['<script src="' + 'jquery-'.repeat(150_000) + '"></script>', '<script '.repeat(125_000), '<link href="/jquery-'.repeat(50_000)]) {
+      const t = performance.now();
+      leerLibrerias(html);
+      expect(performance.now() - t).toBeLessThan(1500);
+    }
+  });
+});
+
+describe('tecnologias.librerias', () => {
+  const cuerpo = (...src: string[]) => con({}, scripts(...src));
+  it('una librería con fallos publicados es un fallo importante, con su nombre y versión', () => {
+    expect(por(cuerpo('/jquery-1.12.4.min.js', '/bootstrap-3.3.7.js'), 'tecnologias.librerias')).toMatchObject({
+      resultado: 'fallo',
+      gravedad: 'alta',
+      peso: 6,
+      datos: { lista: ['jQuery 1.12.4', 'Bootstrap 3.3.7'] },
+    });
+  });
+  it('con más de cinco lista cinco y dice cuántas faltan (no recorta en silencio)', () => {
+    const src = Array.from({ length: 7 }, (_, i) => `/jquery-1.${i}.0.js`);
+    const h = por(cuerpo(...src), 'tecnologias.librerias');
+    expect(h?.datos).toMatchObject({ mas: 2 });
+    expect((h?.datos?.lista as string[]).length).toBe(5);
+  });
+  it('si todas las que se ven están al día, correcto', () => {
+    expect(por(cuerpo('/jquery-3.7.1.min.js'), 'tecnologias.librerias')).toMatchObject({ resultado: 'correcto', datos: { total: 1 } });
+  });
+  it('si hay una buena y una mala, manda la mala', () => {
+    expect(por(cuerpo('/jquery-3.7.1.min.js', '/angular-1.8.2.js'), 'tecnologias.librerias')?.resultado).toBe('fallo');
+  });
+  it('sin ninguna reconocida, no aplica (no se presume que esté bien)', () => {
+    expect(por(cuerpo('/app.js'), 'tecnologias.librerias')?.resultado).toBe('no-aplica');
+  });
+  it('sin HTML que leer, no aplica', () => {
+    expect(por(con({}, null), 'tecnologias.librerias')?.resultado).toBe('no-aplica');
   });
 });

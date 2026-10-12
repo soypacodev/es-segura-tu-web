@@ -443,6 +443,18 @@ export const TEXTOS: Record<string, TextoHallazgo> = {
     arreglo: 'Quita esa cabecera. En PHP es «expose_php = Off»; en Express (Node), «app.disable("x-powered-by")»; en ASP.NET, quitarla del archivo de configuración. Tu proveedor puede hacerlo.',
     codigo: 'PHP (php.ini): expose_php = Off',
   },
+  'tecnologias.librerias': {
+    titulo: 'Las librerías de JavaScript no están desfasadas',
+    correcto: (d) => `Las librerías con versión que se ven en la página (${num(d, 'total') ?? 0}) no tienen fallos conocidos por su versión.`,
+    fallo: (d) => {
+      const lista = Array.isArray(d['lista']) ? (d['lista'] as string[]) : [];
+      const mas = num(d, 'mas') ?? 0;
+      const nombres = lista.join(', ') + (mas > 0 ? ` y ${mas} más` : '');
+      return `La página carga ${nombres}: versiones con fallos de seguridad publicados o sin soporte. Quien conozca esos fallos puede intentar aprovecharlos en tu web.`;
+    },
+    noAplica: 'No se reconoció ninguna librería con versión en la página (solo se ven las que se cargan con la versión en su dirección; lo que va empaquetado dentro de otro archivo no se ve).',
+    arreglo: 'Actualiza la librería a una versión reciente (jQuery 3.5 o superior, Bootstrap 3.4.1 / 4.3.1 o superior) y, si es AngularJS, planifica el paso a una alternativa con soporte. Si tu web usa un gestor como WordPress, actualiza el tema y los plugins que la incluyen.',
+  },
   'tecnologias.generador': {
     titulo: 'La página no anuncia el gestor ni su versión',
     correcto: 'El código de la página no anuncia qué gestor de contenidos ni qué versión usas.',
