@@ -1,0 +1,42 @@
+{
+  "name": "es-segura-tu-web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Analizador gratuito de seguridad web: pega una dirección y recibe una nota de la A a la F con explicaciones sencillas y cómo arreglarlo.",
+  "license": "MIT",
+  "author": "Paco López <soypacodev@gmail.com> (https://github.com/soypacodev)",
+  "homepage": "https://github.com/soypacodev/es-segura-tu-web#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/soypacodev/es-segura-tu-web.git"
+  },
+  "bugs": {
+    "url": "https://github.com/soypacodev/es-segura-tu-web/issues"
+  },
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:vigilar": "vitest",
+    "analizar": "tsx scripts/analizar.ts"
+  },
+  "dependencies": {
+    "next": "16.4.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "server-only": "^0.0.1",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.4.0",
+    "tsx": "^4.23.15",
+    "typescript": "^5",
+    "vitest": "^5.0.3"
+  }
+}

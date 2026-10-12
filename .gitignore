@@ -1,0 +1,44 @@
+# Dependencias
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# Pruebas
+/coverage
+
+# Next.js
+/.next/
+/out/
+
+# Producción
+/build
+
+# Sistema y claves locales
+.DS_Store
+*.pem
+
+# Registros de depuración
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Variables de entorno: solo se sube la plantilla
+.env*
+!.env.example
+
+# Vercel
+.vercel
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Resultados de pruebas
+/test-results/
+/playwright-report/
