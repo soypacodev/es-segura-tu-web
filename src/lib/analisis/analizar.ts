@@ -6,6 +6,7 @@
 
 import { comprobarCabeceras } from './comprobaciones/cabeceras';
 import { comprobarCookies } from './comprobaciones/cookies';
+import { comprobarPrivacidad } from './comprobaciones/privacidad';
 import { comprobarTecnologias } from './comprobaciones/tecnologias';
 import { comprobarHttps } from './comprobaciones/https';
 import type { Descargador, OpcionesDescarga } from './descarga';
@@ -113,6 +114,7 @@ export async function analizarSitio(entrada: string, dependencias: DependenciasA
     ...comprobarCabeceras(captura),
     ...comprobarCookies(captura),
     ...comprobarTecnologias(captura, momento),
+    ...comprobarPrivacidad(captura),
   ];
 
   return {

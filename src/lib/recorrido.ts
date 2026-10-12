@@ -17,7 +17,7 @@ export const PARADAS: readonly { id: IdParada; ids: readonly string[] }[] = [
   },
   { id: 'servidor', ids: ['https.hsts', 'tecnologias.'] },
   { id: 'navegador', ids: ['cabeceras.'] },
-  { id: 'cookies', ids: ['cookies.'] },
+  { id: 'cookies', ids: ['cookies.', 'privacidad.'] },
 ];
 
 export type EstadoParada = Resultado | 'sin-datos';

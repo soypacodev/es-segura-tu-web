@@ -14,7 +14,7 @@ const ORDEN: readonly Letra[] = ['F', 'D', 'C', 'B', 'A', 'A+'];
 
 const FACTOR: Record<Exclude<Resultado, 'no-aplica'>, number> = { correcto: 1, mejorable: 0.5, fallo: 0 };
 
-const CATEGORIAS: readonly Categoria[] = ['https', 'cabeceras', 'cookies', 'tecnologias'];
+const CATEGORIAS: readonly Categoria[] = ['https', 'cabeceras', 'cookies', 'privacidad', 'tecnologias'];
 
 export interface Nota {
   puntos: number;

@@ -24,7 +24,7 @@ describe('paradas del recorrido', () => {
     const carpeta = join(__dirname, 'analisis/comprobaciones');
     const ids = new Set<string>();
     for (const f of readdirSync(carpeta).filter((f) => f.endsWith('.ts') && !f.endsWith('.test.ts'))) {
-      for (const m of readFileSync(join(carpeta, f), 'utf8').matchAll(/'((?:https|cabeceras|cookies|tecnologias)\.[a-z]+(?:\.[a-z]+)*)'/g))
+      for (const m of readFileSync(join(carpeta, f), 'utf8').matchAll(/'((?:https|cabeceras|cookies|tecnologias|privacidad)\.[a-z]+(?:\.[a-z]+)*)'/g))
         ids.add(m[1]);
     }
     expect(ids.size).toBeGreaterThanOrEqual(22);

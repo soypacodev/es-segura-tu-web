@@ -42,6 +42,15 @@ function listaCookies(d: Datos): string {
   return nombres.length === 1 && mas === 0 ? `La cookie ${texto}` : `Las cookies ${texto}${extra}`;
 }
 
+/** «Google Analytics, Hotjar y 2 más», a partir de los datos del hallazgo. */
+function listaNombres(d: Datos): string {
+  const nombres = Array.isArray(d['nombres']) ? (d['nombres'] as string[]) : [];
+  const mas = num(d, 'mas') ?? 0;
+  if (nombres.length === 0) return 'servicios de terceros';
+  const texto = nombres.length === 1 ? nombres[0] : `${nombres.slice(0, -1).join(', ')} y ${nombres[nombres.length - 1]}`;
+  return mas > 0 ? `${nombres.join(', ')} y ${mas} más` : texto;
+}
+
 const fechaLarga = (iso: string) => new Date(`${iso}T12:00:00Z`).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
 
 const dias = (n: number) => (n === 1 ? '1 día' : `${n} días`);
@@ -215,6 +224,49 @@ export const TEXTOS: Record<string, TextoHallazgo> = {
     arreglo: 'Añade «SameSite=Lax» (o «Strict» si tu web lo permite) a las cookies.',
     codigo: 'Set-Cookie: sesion=...; Secure; HttpOnly; SameSite=Lax',
   },
+  'privacidad.rastreadores': {
+    titulo: 'La página no carga rastreadores de terceros',
+    correcto: 'No hemos encontrado servicios de analítica ni de publicidad de terceros en la página: tus visitantes no envían datos a nadie más.',
+    mejorable: (d) =>
+      `La página carga ${listaNombres(d)}. Servicios así reciben datos de tus visitantes (qué páginas ven, desde qué dispositivo y a veces un identificador de publicidad). En la Unión Europea eso suele exigir su consentimiento previo.`,
+    noAplica: 'No se pudo leer la página entera.',
+    arreglo:
+      'Pregúntate si de verdad usas cada uno y quita los que no. Para medir visitas puedes usar una herramienta que no identifica personas, como Plausible, Umami o Matomo en tu propio servidor, que en muchos casos no necesita consentimiento.',
+  },
+  'privacidad.consentimiento': {
+    titulo: 'Hay aviso de cookies donde hace falta',
+    correcto: (d) =>
+      `La web carga servicios de seguimiento y muestra un aviso de cookies${txt(d, 'gestor') && txt(d, 'gestor') !== 'propio' ? ` (${txt(d, 'gestor')})` : ''}. Comprueba que esos servicios no se activan hasta que el visitante acepta: desde fuera no podemos verlo.`,
+    mejorable: (d) =>
+      `La página carga ${listaNombres(d)}, pero en su código no vemos ningún aviso de cookies. Si lo añade un script después de cargar, puede que lo tengas; si no, estás recogiendo datos sin pedir permiso.`,
+    noAplica: 'Solo se valora si la web carga rastreadores.',
+    arreglo:
+      'Instala un gestor de consentimiento (Cookiebot, Iubenda, CookieYes o Complianz en WordPress, por ejemplo) y configúralo para que los rastreadores solo se carguen tras aceptar. Rechazar debe ser tan fácil como aceptar.',
+  },
+  'privacidad.fuentes': {
+    titulo: 'Las tipografías se sirven desde tu propia web',
+    correcto: 'Tu web no pide tipografías a Google: el navegador del visitante no le cuenta a Google que ha entrado.',
+    mejorable:
+      'La página pide sus tipografías a los servidores de Google. Al hacerlo, la dirección IP del visitante llega a Google sin que haya aceptado nada, y algunos tribunales europeos han considerado que eso incumple el RGPD.',
+    noAplica: 'No se pudo leer la página entera.',
+    arreglo: 'Descarga las tipografías y sírvelas desde tu propia web. En WordPress hay plugins que lo hacen solos; en Next.js, next/font las aloja por ti.',
+  },
+  'privacidad.politica': {
+    titulo: 'Hay una política de privacidad enlazada',
+    correcto: 'La página enlaza a una política de privacidad, donde el RGPD pide explicar qué datos recoges y para qué.',
+    mejorable:
+      'No vemos ningún enlace a una política de privacidad en la página principal. Si tu web recoge datos (formularios, cuentas, analítica), el RGPD exige explicar qué haces con ellos. Si el enlace lo pone un script, puede que sí lo tengas.',
+    noAplica: 'No se pudo leer la página entera.',
+    arreglo: 'Redacta una política de privacidad (qué datos recoges, para qué, cuánto tiempo y cómo ejercer los derechos) y enlázala desde el pie de todas las páginas.',
+  },
+  'privacidad.avisolegal': {
+    titulo: 'Hay un aviso legal enlazado',
+    correcto: 'La página enlaza a un aviso legal o a unas condiciones de uso.',
+    mejorable:
+      'No vemos enlace a un aviso legal. En España, las webs de empresas y profesionales deben indicar quién está detrás (nombre o razón social, NIF, domicilio y contacto), según la ley de servicios de la sociedad de la información (LSSI).',
+    noAplica: 'No se pudo leer la página entera.',
+    arreglo: 'Añade una página de aviso legal con los datos de la persona o empresa titular y enlázala desde el pie.',
+  },
   'tecnologias.php': {
     titulo: 'La versión de PHP sigue recibiendo parches',
     correcto: (d) => `Tu web declara PHP ${txt(d, 'version') ?? ''}, una versión que todavía recibe parches de seguridad.`,
@@ -288,6 +340,7 @@ export const CATEGORIAS: Record<Categoria, { nombre: string; corto: string; desc
   https: { nombre: 'Conexión segura', corto: 'Conexión', descripcion: 'Cifrado, certificado y redirecciones' },
   cabeceras: { nombre: 'Defensas del navegador', corto: 'Defensas', descripcion: 'Cabeceras que protegen a tus visitantes' },
   cookies: { nombre: 'Cookies', corto: 'Cookies', descripcion: 'Cómo se guardan en el navegador de tus visitantes' },
+  privacidad: { nombre: 'Privacidad y RGPD', corto: 'Privacidad', descripcion: 'Quién recibe datos de tus visitantes y qué les cuentas' },
   tecnologias: { nombre: 'Tecnologías expuestas', corto: 'Tecnologías', descripcion: 'Qué cuenta tu web sobre cómo está hecha' },
 };
 
@@ -352,47 +405,24 @@ export const ERRORES_PETICION: Record<string, string> = {
 };
 
 /** Paradas del «Recorrido de la conexión». */
-export const PARADAS_TEXTO: Record<
-  IdParada,
-  { nombre: string; detalle: string }
-> = {
-  direccion: {
-    nombre: "Alguien escribe tu dirección",
-    detalle: "Entra con http:// o sin nada delante.",
-  },
-  canal: {
-    nombre: "Se abre un canal cifrado",
-    detalle: "El certificado y la versión del cifrado.",
-  },
-  servidor: {
-    nombre: "Tu servidor responde",
-    detalle: "Lo que ordena al navegador y lo que cuenta de sí mismo.",
-  },
-  navegador: {
-    nombre: "El navegador se defiende",
-    detalle: "Cabeceras que limitan lo que puede hacer la página.",
-  },
-  cookies: {
-    nombre: "Se guardan las cookies",
-    detalle: "Cómo quedan guardadas en el equipo del visitante.",
-  },
+export const PARADAS_TEXTO: Record<IdParada, { nombre: string; detalle: string }> = {
+  direccion: { nombre: 'Alguien escribe tu dirección', detalle: 'Entra con http:// o sin nada delante.' },
+  canal: { nombre: 'Se abre un canal cifrado', detalle: 'El certificado y la versión del cifrado.' },
+  servidor: { nombre: 'Tu servidor responde', detalle: 'Lo que ordena al navegador y lo que cuenta de sí mismo.' },
+  navegador: { nombre: 'El navegador se defiende', detalle: 'Cabeceras que limitan lo que puede hacer la página.' },
+  cookies: { nombre: 'Cookies y rastreadores', detalle: 'Qué se guarda en el equipo del visitante y quién más recibe datos.' },
 };
 
-export function textoDeEstadoParada(
-  estado: EstadoParada,
-  pendientes: number,
-): string {
+export function textoDeEstadoParada(estado: EstadoParada, pendientes: number): string {
   switch (estado) {
-    case "correcto":
-      return "Todo bien";
-    case "sin-datos":
-      return "Sin datos";
+    case 'correcto':
+      return 'Todo bien';
+    case 'sin-datos':
+      return 'Sin datos';
     default: {
       const n = Math.max(pendientes, 1);
-      const cuantos = n === 1 ? "1 punto" : `${n} puntos`;
-      return estado === "fallo"
-        ? `Falla: ${cuantos} por arreglar`
-        : `${cuantos} por mejorar`;
+      const cuantos = n === 1 ? '1 punto' : `${n} puntos`;
+      return estado === 'fallo' ? `Falla: ${cuantos} por arreglar` : `${cuantos} por mejorar`;
     }
   }
 }

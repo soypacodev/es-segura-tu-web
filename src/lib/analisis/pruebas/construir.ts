@@ -34,7 +34,7 @@ export function respuesta(cambios: Partial<RespuestaCapturada> = {}): RespuestaC
     estado: 200,
     cabeceras: { ...CABECERAS_BUENAS },
     certificados: [{ host: 'ejemplo.com', tls: tls() }],
-    cuerpo: '<!doctype html><html><body>hola</body></html>',
+    cuerpo: '<!doctype html><html><body>hola<footer><a href="/privacidad">Política de privacidad</a> <a href="/aviso-legal">Aviso legal</a></footer></body></html>',
     estadoCuerpo: 'completo',
     bytesLeidos: 44,
     duracionMs: 20,
