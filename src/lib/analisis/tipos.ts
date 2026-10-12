@@ -11,7 +11,7 @@ export type Gravedad = 'critica' | 'alta' | 'media' | 'baja' | 'info';
 
 export type Resultado = 'correcto' | 'mejorable' | 'fallo' | 'no-aplica';
 
-export type Categoria = 'https' | 'cabeceras' | 'cookies' | 'tecnologias' | 'privacidad' | 'dns' | 'contenido';
+export type Categoria = 'https' | 'cabeceras' | 'cookies' | 'tecnologias' | 'privacidad' | 'dns' | 'contenido' | 'rendimiento';
 
 export type DatoSimple = string | number | boolean | null;
 export type Datos = Record<string, DatoSimple | readonly string[]>;

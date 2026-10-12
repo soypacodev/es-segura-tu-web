@@ -37,6 +37,7 @@ describe('analizarSitio · camino feliz', () => {
       { id: 'cookies', puntos: 100 },
       { id: 'privacidad', puntos: 100 },
       { id: 'tecnologias', puntos: 100 },
+      { id: 'rendimiento', puntos: 100 },
     ]);
   });
 
@@ -63,24 +64,24 @@ describe('analizarSitio · camino feliz', () => {
 });
 
 describe('analizarSitio · notas realistas (cuentas hechas a mano)', () => {
-  it('sin HSTS: (133 − 12) / 133 = 91 → A', async () => {
+  it('sin HSTS: (163 − 12) / 163 = 93 → A', async () => {
     const sinHsts = respuesta({ cabeceras: { ...respuesta().cabeceras, 'strict-transport-security': [] } });
     delete sinHsts.cabeceras['strict-transport-security'];
     const i = await informe('ejemplo.com', bien(sinHsts));
-    expect(i.nota).toMatchObject({ puntos: 91, letra: 'A' });
+    expect(i.nota).toMatchObject({ puntos: 93, letra: 'A' });
   });
 
-  it('sin política CSP (que también deja sin protección contra clickjacking): (133 − 14 − 6) / 133 = 85 → B', async () => {
+  it('sin política CSP (que también deja sin protección contra clickjacking): (163 − 14 − 6) / 163 = 88 → B', async () => {
     const base = respuesta();
     delete base.cabeceras['content-security-policy'];
     const i = await informe('ejemplo.com', bien(base));
-    expect(i.nota).toMatchObject({ puntos: 85, letra: 'B' });
+    expect(i.nota).toMatchObject({ puntos: 88, letra: 'B' });
   });
 
-  it('web antigua con PHP 7.4 y una cookie de sesión sin proteger: (154 − 8 − 8 − 6 − 1,5 − 1,5) / 154 = 84 → B (la cabecera que anuncia «PHP/7.4.3» también resta medio punto de 3)', async () => {
+  it('web antigua con PHP 7.4 y una cookie de sesión sin proteger: (184 − 8 − 8 − 6 − 1,5 − 1,5) / 184 = 86 → B (la cabecera que anuncia «PHP/7.4.3» también resta medio punto de 3)', async () => {
     const r = respuesta({ cabeceras: { ...respuesta().cabeceras, 'x-powered-by': ['PHP/7.4.3'], 'set-cookie': ['PHPSESSID=abc; Path=/'] } });
     const i = await informe('ejemplo.com', bien(r));
-    expect(i.nota).toMatchObject({ puntos: 84, letra: 'B', techo: null });
+    expect(i.nota).toMatchObject({ puntos: 86, letra: 'B', techo: null });
     const por = (id: string) => i.hallazgos.find((x) => x.id === id)?.resultado;
     expect([por('tecnologias.php'), por('tecnologias.cabecera'), por('cookies.secure'), por('cookies.httponly'), por('cookies.samesite')]).toEqual([
       'fallo',
@@ -186,10 +187,10 @@ describe('analizarSitio · DNS (SPF, DMARC, CAA)', () => {
     expect(r.informe.nota.categorias.find((c) => c.id === 'dns')?.puntos).toBe(100);
   });
 
-  it('un dominio que recibe correo sin SPF ni DMARC pierde 14 de 150: (150 − 14) / 150 = 91', async () => {
+  it('un dominio que recibe correo sin SPF ni DMARC pierde 14 de 180: (180 − 14) / 180 = 92', async () => {
     const r = await conDns(resolvedorFalso({ mx: { 'ejemplo.com': [{ exchange: 'mx.ejemplo.com', priority: 10 }] }, caa: { 'ejemplo.com': [{ issue: 'x' }] } }));
     if (!r.ok) throw new Error('se esperaba informe');
-    expect(r.informe.nota.puntos).toBe(91);
+    expect(r.informe.nota.puntos).toBe(92);
     expect(r.informe.hallazgos.filter((h) => h.categoria === 'dns' && h.resultado === 'fallo').map((h) => h.id)).toEqual(['dns.spf', 'dns.dmarc']);
   });
 

@@ -25,6 +25,9 @@ export const CABECERAS_BUENAS: Record<string, string[]> = {
   'x-content-type-options': ['nosniff'],
   'referrer-policy': ['strict-origin-when-cross-origin'],
   'permissions-policy': ['camera=(), microphone=(), geolocation=()'],
+  'content-type': ['text/html; charset=utf-8'],
+  'content-encoding': ['br'],
+  'cache-control': ['public, max-age=0, must-revalidate'],
 };
 
 export function respuesta(cambios: Partial<RespuestaCapturada> = {}): RespuestaCapturada {
@@ -34,7 +37,7 @@ export function respuesta(cambios: Partial<RespuestaCapturada> = {}): RespuestaC
     estado: 200,
     cabeceras: { ...CABECERAS_BUENAS },
     certificados: [{ host: 'ejemplo.com', tls: tls() }],
-    cuerpo: '<!doctype html><html><body>hola<footer><a href="/privacidad">Política de privacidad</a> <a href="/aviso-legal">Aviso legal</a></footer></body></html>',
+    cuerpo: '<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Ejemplo</title></head><body>hola<footer><a href="/privacidad">Política de privacidad</a> <a href="/aviso-legal">Aviso legal</a></footer></body></html>',
     estadoCuerpo: 'completo',
     bytesLeidos: 44,
     duracionMs: 20,

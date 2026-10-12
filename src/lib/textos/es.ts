@@ -232,6 +232,73 @@ export const TEXTOS: Record<string, TextoHallazgo> = {
     noAplica: 'La página principal no tiene formularios.',
     arreglo: 'Cambia la dirección de envío del formulario a «https://» (o a una ruta que empiece por «/»).',
   },
+  'rendimiento.compresion': {
+    titulo: 'La página se envía comprimida',
+    correcto: 'Tu servidor comprime la página antes de enviarla, así llega antes y gasta menos datos del visitante.',
+    mejorable: (d) =>
+      `Tu servidor envía la página sin comprimir (${Math.round((num(d, 'bytes') ?? 0) / 1000)} KB). Comprimirla suele reducirla a una cuarta parte o menos, y la web carga más rápido, sobre todo desde el móvil.`,
+    noAplica: 'La página es tan pequeña que comprimirla no compensa, o no se pudo leer entera.',
+    arreglo: 'Activa la compresión (gzip o Brotli) en tu servidor o en tu proveedor. En la mayoría de hostings y CDN es un interruptor.',
+    codigo: 'gzip on;\ngzip_types text/html text/css application/javascript application/json;',
+  },
+  'rendimiento.cache': {
+    titulo: 'La página indica cómo guardarse en caché',
+    correcto: 'Tu servidor da pistas al navegador (Cache-Control, ETag o Last-Modified) para no volver a descargar lo que no ha cambiado.',
+    mejorable:
+      'Tu servidor no dice si la página puede reutilizarse (no hay Cache-Control, ETag ni Last-Modified). El navegador tiene que adivinarlo y suele descargarla entera cada vez.',
+    arreglo: 'Añade una cabecera Cache-Control. Para páginas que cambian a menudo, basta con pedir al navegador que la compruebe antes de reutilizarla.',
+    codigo: 'Cache-Control: public, max-age=0, must-revalidate',
+  },
+  'rendimiento.peso': {
+    titulo: 'El HTML de la página no es excesivo',
+    correcto: (d) => `El HTML de la página principal pesa unos ${num(d, 'kb') ?? 0} KB sin comprimir: razonable.`,
+    mejorable: (d) =>
+      d['recortado'] === true
+        ? `El HTML de la página principal supera los ${num(d, 'kb') ?? 0} KB sin comprimir (se dejó de leer ahí). Una página tan pesada tarda en aparecer, sobre todo con conexión móvil.`
+        : `El HTML de la página principal pesa unos ${num(d, 'kb') ?? 0} KB sin comprimir. Por encima de 500 KB empieza a notarse, sobre todo con conexión móvil.`,
+    noAplica: 'La conexión se cortó mientras se leía la página.',
+    arreglo: 'Saca a archivos aparte el CSS y el JavaScript que estén escritos dentro de la página, y carga bajo demanda las secciones largas.',
+  },
+  'rendimiento.redirecciones': {
+    titulo: 'Se llega a la página sin muchos saltos',
+    correcto: (d) => ((num(d, 'saltos') ?? 0) === 0 ? 'La página responde a la primera, sin redirecciones.' : `Hasta llegar a la página hay ${num(d, 'saltos')} redirección(es): razonable.`),
+    mejorable: (d) =>
+      `Para llegar a la página hay que pasar por ${num(d, 'saltos') ?? 0} redirecciones seguidas. Cada una añade una espera antes de que empiece a cargar.`,
+    arreglo: 'Haz que la dirección que usa la gente (la de los enlaces y buscadores) lleve directamente a la página final, con un solo salto como mucho.',
+  },
+  'rendimiento.codificacion': {
+    titulo: 'Se declara la codificación del texto',
+    correcto: 'La página declara su codificación de texto, así que tildes y eñes se muestran bien en cualquier navegador.',
+    mejorable:
+      'La página no declara su codificación de texto (ni en la cabecera ni en una etiqueta meta al principio). El navegador la adivina y a veces se equivoca: «ñ» se convierte en símbolos raros.',
+    noAplica: 'No se pudo leer lo bastante de la página para saberlo.',
+    arreglo: 'Declara UTF-8 en la primera línea de la cabecera de la página (antes del título).',
+    codigo: '<meta charset="utf-8">',
+  },
+  'rendimiento.movil': {
+    titulo: 'La página se adapta al móvil',
+    correcto: 'La página declara cómo ajustarse a la pantalla del móvil (viewport), así que no se ve en miniatura.',
+    mejorable: 'No se encontró la etiqueta viewport. Sin ella, muchos móviles muestran la web como un escritorio en miniatura, y Google la penaliza en las búsquedas desde móvil.',
+    noAplica: 'No se pudo leer la página entera.',
+    arreglo: 'Añade esta etiqueta dentro de la cabecera de la página.',
+    codigo: '<meta name="viewport" content="width=device-width, initial-scale=1">',
+  },
+  'rendimiento.idioma': {
+    titulo: 'La página declara su idioma',
+    correcto: 'La página declara en qué idioma está, lo que ayuda a los lectores de pantalla, al traductor del navegador y a los buscadores.',
+    mejorable: 'La página no declara su idioma. Los lectores de pantalla pueden leerla con la pronunciación equivocada y el navegador puede ofrecer traducirla sin necesidad.',
+    noAplica: 'No se pudo leer la página entera.',
+    arreglo: 'Añade el atributo lang a la etiqueta html.',
+    codigo: '<html lang="es">',
+  },
+  'rendimiento.titulo': {
+    titulo: 'La página tiene título',
+    correcto: 'La página tiene título: es lo que se ve en la pestaña y lo que aparece en los resultados de búsqueda.',
+    mejorable: 'La página no tiene título (o está vacío). Es lo que se ve en la pestaña del navegador y en los resultados de Google, así que conviene que describa tu web.',
+    noAplica: 'No se pudo leer la página entera.',
+    arreglo: 'Añade una etiqueta title en la cabecera con el nombre de tu web y de qué trata.',
+    codigo: '<title>Nombre de tu web: qué ofreces</title>',
+  },
   'cookies.ninguna': {
     titulo: 'Tu web no guarda cookies al entrar',
     correcto: 'Al visitar la página principal no se guarda ninguna cookie en el navegador del visitante: nada que proteger y nada que avisar.',
@@ -431,6 +498,7 @@ export const CATEGORIAS: Record<Categoria, { nombre: string; corto: string; desc
   cookies: { nombre: 'Cookies', corto: 'Cookies', descripcion: 'Cómo se guardan en el navegador de tus visitantes' },
   privacidad: { nombre: 'Privacidad y RGPD', corto: 'Privacidad', descripcion: 'Quién recibe datos de tus visitantes y qué les cuentas' },
   tecnologias: { nombre: 'Tecnologías expuestas', corto: 'Tecnologías', descripcion: 'Qué cuenta tu web sobre cómo está hecha' },
+  rendimiento: { nombre: 'Rendimiento y buenas prácticas', corto: 'Rendimiento', descripcion: 'Velocidad de carga y detalles que mejoran la web' },
 };
 
 export const GRAVEDAD: Record<Gravedad, string> = {

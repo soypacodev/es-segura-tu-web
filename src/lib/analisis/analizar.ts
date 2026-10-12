@@ -8,6 +8,7 @@ import { comprobarCabeceras } from './comprobaciones/cabeceras';
 import { comprobarDns } from './comprobaciones/dns';
 import { capturarDns, type Resolvedor } from './dns';
 import { comprobarContenido } from './comprobaciones/contenido';
+import { comprobarRendimiento } from './comprobaciones/rendimiento';
 import { comprobarCookies } from './comprobaciones/cookies';
 import { comprobarPrivacidad } from './comprobaciones/privacidad';
 import { comprobarTecnologias } from './comprobaciones/tecnologias';
@@ -126,6 +127,7 @@ export async function analizarSitio(entrada: string, dependencias: DependenciasA
     ...comprobarCookies(captura),
     ...comprobarTecnologias(captura, momento),
     ...comprobarPrivacidad(captura),
+    ...comprobarRendimiento(captura, OPCIONES_HTTPS.maxBytes),
   ];
 
   return {
