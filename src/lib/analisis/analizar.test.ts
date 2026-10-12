@@ -129,3 +129,21 @@ describe('analizarSitio · cuando no hay nota que dar', () => {
     expect(await analizar('ejemplo.com', mal('tiempo-agotado'), mal('tiempo-agotado'))).toMatchObject({ ok: false, error: { codigo: 'sin-respuesta' } });
   });
 });
+
+describe('analizarSitio · progreso', () => {
+  it('avisa cuando termina cada captura, con su resultado', async () => {
+    const alProgreso = vi.fn();
+    await analizarSitio('ejemplo.com', { ...falso(bien(respuesta()), mal('conexion')).deps, alProgreso });
+    expect(alProgreso).toHaveBeenCalledTimes(2);
+    expect(alProgreso).toHaveBeenCalledWith({ tipo: 'captura', via: 'https', ok: true });
+    expect(alProgreso).toHaveBeenCalledWith({ tipo: 'captura', via: 'http', ok: false });
+  });
+
+  it('un fallo en quien escucha el progreso no rompe el análisis', async () => {
+    const alProgreso = vi.fn(() => {
+      throw new Error('boom');
+    });
+    const r = await analizarSitio('ejemplo.com', { ...falso(bien(respuesta())).deps, alProgreso });
+    expect(r.ok).toBe(true);
+  });
+});

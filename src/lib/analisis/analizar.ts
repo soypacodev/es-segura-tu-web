@@ -33,9 +33,14 @@ export type ErrorAnalisis =
 
 export type ResultadoAnalisis = { ok: true; informe: Informe } | { ok: false; error: ErrorAnalisis };
 
+/** Avances del análisis, para mostrarlos mientras se hace (no forman parte del informe). */
+export type EventoProgreso = { tipo: 'captura'; via: 'https' | 'http'; ok: boolean };
+
 export interface DependenciasAnalisis {
   descargador: Descargador;
   ahora?: () => Date;
+  /** Se llama cada vez que termina una de las dos capturas. Un fallo aquí no afecta al análisis. */
+  alProgreso?: (evento: EventoProgreso) => void;
 }
 
 /**
@@ -83,9 +88,17 @@ export async function analizarSitio(entrada: string, dependencias: DependenciasA
   const urlHttps = new URL(`https://${host}${ruta}`);
   const urlHttp = new URL(`http://${host}${ruta}`);
 
+  const avisar = (via: 'https' | 'http', resultado: ResultadoCaptura) => {
+    try {
+      dependencias.alProgreso?.({ tipo: 'captura', via, ok: resultado.ok });
+    } catch {
+      // Quien escucha el progreso no puede romper el análisis.
+    }
+    return resultado;
+  };
   const [https, http] = await Promise.all([
-    dependencias.descargador(urlHttps, OPCIONES_HTTPS),
-    dependencias.descargador(urlHttp, OPCIONES_HTTP),
+    dependencias.descargador(urlHttps, OPCIONES_HTTPS).then((r) => avisar('https', r)),
+    dependencias.descargador(urlHttp, OPCIONES_HTTP).then((r) => avisar('http', r)),
   ]);
 
   const error = noAnalizable(https, http);
