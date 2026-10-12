@@ -5,6 +5,7 @@
 // cómo se arregla. Hay una prueba que obliga a tener texto para cada
 // identificador que el motor pueda emitir.
 
+import type { EstadoParada, IdParada } from '../recorrido';
 import type { MotivoObjetivo } from '../analisis/objetivo';
 import type { Categoria, Datos, Gravedad, Hallazgo, Letra } from '../analisis/tipos';
 
@@ -349,3 +350,49 @@ export const ERRORES_PETICION: Record<string, string> = {
   'demasiados-analisis': 'Has hecho muchos análisis seguidos. Espera un poco antes de seguir.',
   'servidor-ocupado': 'Ahora mismo hay mucha gente analizando webs. Inténtalo de nuevo en unos segundos.',
 };
+
+/** Paradas del «Recorrido de la conexión». */
+export const PARADAS_TEXTO: Record<
+  IdParada,
+  { nombre: string; detalle: string }
+> = {
+  direccion: {
+    nombre: "Alguien escribe tu dirección",
+    detalle: "Entra con http:// o sin nada delante.",
+  },
+  canal: {
+    nombre: "Se abre un canal cifrado",
+    detalle: "El certificado y la versión del cifrado.",
+  },
+  servidor: {
+    nombre: "Tu servidor responde",
+    detalle: "Lo que ordena al navegador y lo que cuenta de sí mismo.",
+  },
+  navegador: {
+    nombre: "El navegador se defiende",
+    detalle: "Cabeceras que limitan lo que puede hacer la página.",
+  },
+  cookies: {
+    nombre: "Se guardan las cookies",
+    detalle: "Cómo quedan guardadas en el equipo del visitante.",
+  },
+};
+
+export function textoDeEstadoParada(
+  estado: EstadoParada,
+  pendientes: number,
+): string {
+  switch (estado) {
+    case "correcto":
+      return "Todo bien";
+    case "sin-datos":
+      return "Sin datos";
+    default: {
+      const n = Math.max(pendientes, 1);
+      const cuantos = n === 1 ? "1 punto" : `${n} puntos`;
+      return estado === "fallo"
+        ? `Falla: ${cuantos} por arreglar`
+        : `${cuantos} por mejorar`;
+    }
+  }
+}

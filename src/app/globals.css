@@ -1095,3 +1095,121 @@ p {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Recorrido de la conexión: vertical en pantallas estrechas, en fila desde 900 px. */
+.recorrido {
+  list-style: none;
+  margin: 20px 0 0;
+  padding: 0;
+  display: grid;
+}
+
+.parada {
+  --color-parada: var(--tinta-suave);
+  position: relative;
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: 0 16px;
+  padding-bottom: 28px;
+}
+
+.parada:last-child {
+  padding-bottom: 0;
+}
+
+.parada[data-estado='correcto'] {
+  --color-parada: var(--nota-a);
+}
+.parada[data-estado='mejorable'] {
+  --color-parada: var(--nota-c);
+}
+.parada[data-estado='fallo'] {
+  --color-parada: var(--nota-f);
+}
+
+.parada__nodo {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--fondo);
+}
+
+.parada__nodo .fila__estado {
+  width: 30px;
+  height: 30px;
+}
+
+/* Tubería hacia la parada siguiente. */
+.parada:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: 17px;
+  top: 36px;
+  bottom: 0;
+  width: 0;
+  border-left: 3px solid var(--color-parada);
+}
+
+.parada:not(:last-child)[data-estado='mejorable']::after,
+.parada:not(:last-child)[data-estado='fallo']::after,
+.parada:not(:last-child)[data-estado='sin-datos']::after {
+  border-left-style: dashed;
+}
+
+.parada__nombre {
+  margin: 0;
+  font-family: var(--letra-titulo);
+  font-weight: 700;
+  font-size: 1.05rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.parada__detalle {
+  margin: 4px 0 0;
+  color: var(--tinta-suave);
+  font-size: 0.95rem;
+}
+
+.parada__estado {
+  margin: 6px 0 0;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+@media (min-width: 900px) {
+  .recorrido {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0 20px;
+  }
+  .parada {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+    padding-bottom: 0;
+  }
+  .parada:not(:last-child)::after {
+    left: 44px;
+    right: -12px;
+    top: 16px;
+    bottom: auto;
+    width: auto;
+    height: 0;
+    border-left: 0;
+    border-top: 3px solid var(--color-parada);
+  }
+  .parada:not(:last-child)[data-estado='mejorable']::after,
+  .parada:not(:last-child)[data-estado='fallo']::after,
+  .parada:not(:last-child)[data-estado='sin-datos']::after {
+    border-top-style: dashed;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .parada__nodo .fila__estado {
+    transition: transform 0.25s ease;
+  }
+}
