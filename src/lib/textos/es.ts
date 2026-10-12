@@ -388,9 +388,9 @@ export function textoDeHallazgo(h: Pick<Hallazgo, 'id' | 'resultado' | 'datos'>)
 
 export const CATEGORIAS: Record<Categoria, { nombre: string; corto: string; descripcion: string }> = {
   https: { nombre: 'Conexión segura', corto: 'Conexión', descripcion: 'Cifrado, certificado y redirecciones' },
+  dns: { nombre: 'Dominio y correo', corto: 'Dominio', descripcion: 'Quién puede enviar correo como tú y emitir tus certificados' },
   cabeceras: { nombre: 'Defensas del navegador', corto: 'Defensas', descripcion: 'Cabeceras que protegen a tus visitantes' },
   cookies: { nombre: 'Cookies', corto: 'Cookies', descripcion: 'Cómo se guardan en el navegador de tus visitantes' },
-  dns: { nombre: 'Dominio y correo', corto: 'Dominio', descripcion: 'Quién puede enviar correo como tú y emitir tus certificados' },
   privacidad: { nombre: 'Privacidad y RGPD', corto: 'Privacidad', descripcion: 'Quién recibe datos de tus visitantes y qué les cuentas' },
   tecnologias: { nombre: 'Tecnologías expuestas', corto: 'Tecnologías', descripcion: 'Qué cuenta tu web sobre cómo está hecha' },
 };

@@ -108,6 +108,11 @@ describe('comprobarPrivacidad', () => {
     expect(por(con('<a href="/p">Privacy policy</a><a href="/l">Legal notice</a>'), 'privacidad.avisolegal').resultado).toBe('correcto');
   });
 
+  it('un enlace «Terms» o «Términos» basta como aviso legal', () => {
+    expect(por(con('<a href="/terms">Terms</a>'), 'privacidad.avisolegal').resultado).toBe('correcto');
+    expect(por(con('<a href="/x">Términos y condiciones</a>'), 'privacidad.avisolegal').resultado).toBe('correcto');
+  });
+
   it('si la página se recortó, lo que falta no se afirma (no aplica), pero lo que sí se vio cuenta', () => {
     const hs = con('<p>hola</p>', 'recortado');
     expect(hs.map((x) => x.resultado)).toEqual(['no-aplica', 'no-aplica', 'no-aplica', 'no-aplica', 'no-aplica']);

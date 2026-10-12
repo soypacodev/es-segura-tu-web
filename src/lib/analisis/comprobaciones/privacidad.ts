@@ -48,7 +48,7 @@ const GESTORES_DE_AVISO: readonly { nombre: string; pista: RegExp }[] = [
 const AVISO_PROPIO = /(cookie[-_ ]?(banner|notice|consent|bar|law)|gdpr[-_ ]?(banner|consent)|(aceptar|accept|rechazar|reject)(\s+todas)?(\s+las)?\s+cookies)/i;
 
 const POLITICA = /privacidad|privacy|protecci[oó]n\s+de\s+datos|rgpd|gdpr/i;
-const AVISO_LEGAL = /aviso\s+legal|legal\s+notice|imprint|impressum|t[eé]rminos|condiciones\s+(de\s+)?(uso|contrataci[oó]n)|terms\s+(of|and)/i;
+const AVISO_LEGAL = /aviso\s+legal|legal\s+notice|imprint|impressum|\bterms\b|t[eé]rminos|condiciones\s+(de\s+)?(uso|contrataci[oó]n)/i;
 
 const MAX_NOMBRES = 5;
 
