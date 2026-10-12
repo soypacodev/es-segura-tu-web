@@ -19,6 +19,11 @@ describe('politicaSeguridad', () => {
     expect(produccion).toContain('upgrade-insecure-requests');
     expect(politicaSeguridad('x', false, false)).not.toContain('upgrade-insecure-requests');
   });
+  it('en desarrollo los estilos permiten inline y no llevan nonce (si no, el navegador lo ignoraría)', () => {
+    const dev = politicaSeguridad('abc', true, false);
+    expect(dev).toContain("style-src 'self' 'unsafe-inline'");
+    expect(dev).not.toMatch(/style-src[^;]*nonce/);
+  });
   it('en desarrollo permite eval (recarga en caliente)', () => {
     expect(politicaSeguridad('x', true, false)).toContain("'unsafe-eval'");
   });
