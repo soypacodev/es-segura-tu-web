@@ -23,6 +23,8 @@
     "analizar": "tsx scripts/analizar.ts"
   },
   "dependencies": {
+    "@fontsource-variable/atkinson-hyperlegible-next": "^5.3.0",
+    "@fontsource-variable/bricolage-grotesque": "^5.3.0",
     "next": "16.4.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
