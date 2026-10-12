@@ -11,7 +11,7 @@ export type Gravedad = 'critica' | 'alta' | 'media' | 'baja' | 'info';
 
 export type Resultado = 'correcto' | 'mejorable' | 'fallo' | 'no-aplica';
 
-export type Categoria = 'https' | 'cabeceras' | 'cookies' | 'tecnologias' | 'privacidad';
+export type Categoria = 'https' | 'cabeceras' | 'cookies' | 'tecnologias' | 'privacidad' | 'dns';
 
 export type DatoSimple = string | number | boolean | null;
 export type Datos = Record<string, DatoSimple | readonly string[]>;
@@ -99,10 +99,28 @@ export interface ErrorCaptura {
 
 export type ResultadoCaptura = { ok: true; respuesta: RespuestaCapturada } | { ok: false; error: ErrorCaptura };
 
+/** Resultado de una consulta DNS: con registros, sin registros, o sin saber (tiempo agotado, servidor caído…). */
+export type ConsultaDns<T> = { estado: 'ok'; valores: T[] } | { estado: 'vacio' } | { estado: 'error' };
+
+/** Lo que dice el DNS del dominio registrable de la web (no del subdominio). */
+export interface CapturaDns {
+  dominio: string;
+  /** Registros TXT del dominio, con los trozos de cada uno ya unidos. */
+  txt: ConsultaDns<string>;
+  /** Registros TXT de _dmarc.<dominio>. */
+  dmarc: ConsultaDns<string>;
+  /** Servidores de correo (solo el nombre). */
+  mx: ConsultaDns<string>;
+  /** Registros CAA vigentes para el nombre de la web. */
+  caa: ConsultaDns<string>;
+}
+
 export interface CapturaSitio {
   host: string;
   /** Entrada por HTTPS, siguiendo redirecciones. */
   https: ResultadoCaptura;
   /** Entrada por HTTP sin seguir redirecciones: sirve para ver a dónde manda. */
   http: ResultadoCaptura;
+  /** Ausente si no se pidió el DNS o la dirección no tiene dominio (una IP, por ejemplo). */
+  dns?: CapturaDns;
 }

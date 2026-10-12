@@ -1096,7 +1096,7 @@ p {
   }
 }
 
-/* Recorrido de la conexión: vertical en pantallas estrechas, en fila desde 900 px. */
+/* Recorrido de la conexión: vertical en pantallas estrechas, en fila desde 1000 px. */
 .recorrido {
   list-style: none;
   margin: 20px 0 0;
@@ -1181,9 +1181,9 @@ p {
   font-size: 0.95rem;
 }
 
-@media (min-width: 900px) {
+@media (min-width: 1000px) {
   .recorrido {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 0 20px;
   }
   .parada {

@@ -224,6 +224,56 @@ export const TEXTOS: Record<string, TextoHallazgo> = {
     arreglo: 'Añade «SameSite=Lax» (o «Strict» si tu web lo permite) a las cookies.',
     codigo: 'Set-Cookie: sesion=...; Secure; HttpOnly; SameSite=Lax',
   },
+  'dns.spf': {
+    titulo: 'Tu dominio dice quién puede enviar correo en su nombre (SPF)',
+    correcto: (d) => `Tu dominio publica su registro SPF (${txt(d, 'politica') ?? 'correcto'}): los servidores de correo saben qué servidores están autorizados a enviar como tú.`,
+    mejorable: (d) =>
+      txt(d, 'motivo') === 'permisivo'
+        ? 'Tu registro SPF no dice qué hacer con los servidores que no están en la lista (termina en «?all» o sin «all»), así que no frena a nadie.'
+        : 'Tu dominio no publica registro SPF. Aunque no envíes correo con él, conviene declararlo: así cuesta mucho más suplantarte.',
+    fallo: (d) =>
+      txt(d, 'motivo') === 'duplicado'
+        ? 'Hay más de un registro SPF en tu dominio. Es un error: muchos servidores lo rechazan y tu SPF deja de valer.'
+        : txt(d, 'motivo') === 'abierto'
+          ? 'Tu registro SPF termina en «+all», que autoriza a cualquier servidor del mundo a enviar como tú. Es lo mismo que no tener SPF.'
+          : 'Tu dominio recibe correo pero no publica registro SPF: cualquiera puede enviar correos haciéndose pasar por ti y los filtros no tienen cómo detectarlo.',
+    noAplica: 'No se pudo consultar el DNS del dominio.',
+    arreglo:
+      'Publica un único registro TXT en tu dominio que empiece por «v=spf1», liste los servicios con los que envías correo y termine en «-all» (o «~all» mientras pruebas). Tu proveedor de correo te da el valor exacto.',
+    codigo: 'v=spf1 include:_spf.tuproveedor.com -all',
+  },
+  'dns.dmarc': {
+    titulo: 'Tu dominio dice qué hacer con el correo falso (DMARC)',
+    correcto: (d) => `Tu registro DMARC pide ${txt(d, 'politica') === 'reject' ? 'rechazar' : 'mandar a spam'} el correo que se haga pasar por tu dominio.`,
+    mejorable: (d) => {
+      switch (txt(d, 'motivo')) {
+        case 'solo-observar':
+          return 'Tu DMARC está en modo «solo observar» (p=none): recibes informes, pero el correo falso sigue llegando. Es un buen primer paso; el siguiente es endurecerlo.';
+        case 'parcial':
+          return `Tu DMARC aplica su política solo al ${num(d, 'pct') ?? 0}% del correo. El resto pasa sin control.`;
+        case 'sin-politica':
+          return 'El registro DMARC no indica la política «p=», así que no se aplica.';
+        default:
+          return 'Tu dominio no publica DMARC. Si no lo usas para enviar correo, declararlo (p=reject) evita que otros lo usen para suplantarte.';
+      }
+    },
+    fallo: (d) =>
+      txt(d, 'motivo') === 'duplicado'
+        ? 'Hay más de un registro DMARC en tu dominio. Es un error: los servidores lo ignoran.'
+        : 'Tu dominio recibe correo pero no publica DMARC: no hay forma de pedir que se rechace el correo que se haga pasar por ti, y Google o Yahoo lo exigen a quien envía mucho correo.',
+    noAplica: 'No se pudo consultar el DNS del dominio.',
+    arreglo:
+      'Publica un registro TXT en _dmarc.tudominio. Empieza con «p=none» y una dirección para recibir informes, revisa quién envía correo en tu nombre y sube a «quarantine» y después a «reject».',
+    codigo: 'Nombre: _dmarc\nTipo: TXT\nValor: v=DMARC1; p=none; rua=mailto:dmarc@tudominio.com',
+  },
+  'dns.caa': {
+    titulo: 'Solo las entidades que elijas pueden emitir tus certificados (CAA)',
+    correcto: 'Tu dominio tiene registros CAA: solo las entidades que indicas pueden emitir certificados para él.',
+    mejorable: 'Tu dominio no tiene registros CAA, así que cualquier entidad de certificación puede emitir certificados para él. Es una capa extra de protección, no una obligación.',
+    noAplica: 'No se pudo consultar el DNS del dominio.',
+    arreglo: 'Añade un registro CAA que nombre la entidad que usas (por ejemplo, letsencrypt.org). Tu proveedor de DNS suele tener un formulario para ello.',
+    codigo: '0 issue "letsencrypt.org"',
+  },
   'privacidad.rastreadores': {
     titulo: 'La página no carga rastreadores de terceros',
     correcto: 'No hemos encontrado servicios de analítica ni de publicidad de terceros en la página: tus visitantes no envían datos a nadie más.',
@@ -340,6 +390,7 @@ export const CATEGORIAS: Record<Categoria, { nombre: string; corto: string; desc
   https: { nombre: 'Conexión segura', corto: 'Conexión', descripcion: 'Cifrado, certificado y redirecciones' },
   cabeceras: { nombre: 'Defensas del navegador', corto: 'Defensas', descripcion: 'Cabeceras que protegen a tus visitantes' },
   cookies: { nombre: 'Cookies', corto: 'Cookies', descripcion: 'Cómo se guardan en el navegador de tus visitantes' },
+  dns: { nombre: 'Dominio y correo', corto: 'Dominio', descripcion: 'Quién puede enviar correo como tú y emitir tus certificados' },
   privacidad: { nombre: 'Privacidad y RGPD', corto: 'Privacidad', descripcion: 'Quién recibe datos de tus visitantes y qué les cuentas' },
   tecnologias: { nombre: 'Tecnologías expuestas', corto: 'Tecnologías', descripcion: 'Qué cuenta tu web sobre cómo está hecha' },
 };
@@ -410,6 +461,7 @@ export const PARADAS_TEXTO: Record<IdParada, { nombre: string; detalle: string }
   canal: { nombre: 'Se abre un canal cifrado', detalle: 'El certificado y la versión del cifrado.' },
   servidor: { nombre: 'Tu servidor responde', detalle: 'Lo que ordena al navegador y lo que cuenta de sí mismo.' },
   navegador: { nombre: 'El navegador se defiende', detalle: 'Cabeceras que limitan lo que puede hacer la página.' },
+  dominio: { nombre: 'Se busca tu dominio', detalle: 'Quién puede enviar correo como tú y emitir tus certificados.' },
   cookies: { nombre: 'Cookies y rastreadores', detalle: 'Qué se guarda en el equipo del visitante y quién más recibe datos.' },
 };
 

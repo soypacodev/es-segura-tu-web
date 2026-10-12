@@ -2,6 +2,7 @@ import 'server-only';
 import { z } from 'zod';
 import { analizarSitio } from '@/lib/analisis/analizar';
 import { descargadorSeguro } from '@/lib/analisis/descarga';
+import { resolvedorReal } from '@/lib/analisis/dns';
 import { normalizarObjetivo } from '@/lib/analisis/objetivo';
 import { crearLimitador } from '@/lib/limite';
 import type { ErrorPeticion, Evento } from '@/lib/protocolo';
@@ -21,6 +22,8 @@ const SIN_CACHE = { 'Cache-Control': 'no-store' };
 function rechazo(estado: number, error: ErrorPeticion, extra: Record<string, string> = {}) {
   return Response.json({ error }, { status: estado, headers: { ...SIN_CACHE, ...extra } });
 }
+
+const resolvedor = resolvedorReal();
 
 export async function POST(peticion: Request) {
   if (!origenPermitido(peticion.headers.get('origin'), peticion.headers.get('host'))) return rechazo(403, { codigo: 'origen' });
@@ -71,6 +74,7 @@ export async function POST(peticion: Request) {
         enviar({ t: 'inicio', host: objetivo.host });
         const resultado = await analizarSitio(datos.direccion, {
           descargador: descargadorSeguro,
+          resolvedor,
           alProgreso: (e) => enviar({ t: 'captura', via: e.via, ok: e.ok }),
         });
         enviar(resultado.ok ? { t: 'informe', informe: resultado.informe } : { t: 'error', error: resultado.error });

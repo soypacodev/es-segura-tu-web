@@ -20,7 +20,7 @@ const comprobaciones = readdirSync(join(CARPETA, 'comprobaciones'))
   .map((f) => join(CARPETA, 'comprobaciones', f));
 
 describe('textos en español', () => {
-  const ids = idsDelMotor(comprobaciones, /'((?:https|cabeceras|cookies|tecnologias|privacidad)\.[a-z]+(?:\.[a-z]+)*)'/g);
+  const ids = idsDelMotor(comprobaciones, /'((?:https|cabeceras|cookies|tecnologias|privacidad|dns)\.[a-z]+(?:\.[a-z]+)*)'/g);
 
   it('el motor emite hallazgos (la búsqueda de identificadores funciona)', () => {
     expect(ids.length).toBeGreaterThanOrEqual(22);

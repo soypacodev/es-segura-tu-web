@@ -6,10 +6,11 @@
 import type { Hallazgo, Resultado } from './analisis/tipos';
 import { sePuedeArreglar } from './simulacion';
 
-export type IdParada = 'direccion' | 'canal' | 'servidor' | 'navegador' | 'cookies';
+export type IdParada = 'dominio' | 'direccion' | 'canal' | 'servidor' | 'navegador' | 'cookies';
 
 /** Orden del recorrido y hallazgos que pertenecen a cada parada (por prefijo exacto o por familia terminada en «.»). */
 export const PARADAS: readonly { id: IdParada; ids: readonly string[] }[] = [
+  { id: 'dominio', ids: ['dns.'] },
   { id: 'direccion', ids: ['https.redireccion.http'] },
   {
     id: 'canal',

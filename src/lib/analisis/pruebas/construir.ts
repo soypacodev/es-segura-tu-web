@@ -75,3 +75,28 @@ export function sitioConCabeceras(cambios: Record<string, string[] | undefined>)
   }
   return sitio({ https: bien(respuesta({ cabeceras })) });
 }
+
+/** Un fallo de DNS como los de Node: con su «code». */
+export const errorDns = (code: string) => Object.assign(new Error(code), { code });
+
+type Respuestas = { ns?: Record<string, string[] | string>; txt?: Record<string, string[][] | string>; mx?: Record<string, { exchange: string; priority: number }[] | string>; caa?: Record<string, object[] | string> };
+
+/**
+ * Resolvedor falso. Cada nombre devuelve sus registros, o lanza el error
+ * indicado con un texto (por ejemplo, «ENODATA» o «ETIMEOUT»). Un nombre que
+ * no se menciona responde «ENODATA».
+ */
+export function resolvedorFalso(r: Respuestas = {}) {
+  const buscar = <T>(tabla: Record<string, T | string> | undefined, nombre: string): Promise<T> => {
+    const v = tabla?.[nombre];
+    if (v === undefined) return Promise.reject(errorDns('ENODATA'));
+    return typeof v === 'string' ? Promise.reject(errorDns(v)) : Promise.resolve(v);
+  };
+  return {
+    txt: (n: string) => buscar(r.txt, n),
+    mx: (n: string) => buscar(r.mx, n),
+    caa: (n: string) => buscar(r.caa, n),
+    // Por defecto todo dominio tiene servidores de nombres, como en la realidad.
+    ns: (n: string) => (r.ns ? buscar(r.ns, n) : Promise.resolve(['ns1.proveedor.com'])),
+  };
+}

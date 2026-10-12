@@ -9,6 +9,7 @@
 
 import { analizarSitio, type Informe } from '@/lib/analisis/analizar';
 import { descargadorSeguro } from '@/lib/analisis/descarga';
+import { resolvedorReal } from '@/lib/analisis/dns';
 
 const MARCAS = { correcto: '✔ correcto ', mejorable: '~ mejorable', fallo: '✖ fallo    ', 'no-aplica': '· no aplica' } as const;
 
@@ -41,7 +42,7 @@ async function principal() {
     process.exit(2);
   }
 
-  const resultado = await analizarSitio(direccion, { descargador: descargadorSeguro });
+  const resultado = await analizarSitio(direccion, { descargador: descargadorSeguro, resolvedor: resolvedorReal() });
   if (!resultado.ok) {
     console.error(`\nNo se puede analizar: ${JSON.stringify(resultado.error)}`);
     process.exit(1);

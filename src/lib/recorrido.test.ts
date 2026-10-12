@@ -24,7 +24,7 @@ describe('paradas del recorrido', () => {
     const carpeta = join(__dirname, 'analisis/comprobaciones');
     const ids = new Set<string>();
     for (const f of readdirSync(carpeta).filter((f) => f.endsWith('.ts') && !f.endsWith('.test.ts'))) {
-      for (const m of readFileSync(join(carpeta, f), 'utf8').matchAll(/'((?:https|cabeceras|cookies|tecnologias|privacidad)\.[a-z]+(?:\.[a-z]+)*)'/g))
+      for (const m of readFileSync(join(carpeta, f), 'utf8').matchAll(/'((?:https|cabeceras|cookies|tecnologias|privacidad|dns)\.[a-z]+(?:\.[a-z]+)*)'/g))
         ids.add(m[1]);
     }
     expect(ids.size).toBeGreaterThanOrEqual(22);
@@ -82,7 +82,7 @@ describe('estado de cada parada', () => {
     });
   });
 
-  it('devuelve las cinco paradas en orden', () => {
-    expect(calcularRecorrido([]).map((p) => p.id)).toEqual(['direccion', 'canal', 'servidor', 'navegador', 'cookies']);
+  it('devuelve las seis paradas en orden', () => {
+    expect(calcularRecorrido([]).map((p) => p.id)).toEqual(['dominio', 'direccion', 'canal', 'servidor', 'navegador', 'cookies']);
   });
 });

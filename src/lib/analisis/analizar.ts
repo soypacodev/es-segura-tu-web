@@ -5,6 +5,8 @@
 // a internet; en las pruebas se le pasa uno falso y no hay red.
 
 import { comprobarCabeceras } from './comprobaciones/cabeceras';
+import { comprobarDns } from './comprobaciones/dns';
+import { capturarDns, type Resolvedor } from './dns';
 import { comprobarCookies } from './comprobaciones/cookies';
 import { comprobarPrivacidad } from './comprobaciones/privacidad';
 import { comprobarTecnologias } from './comprobaciones/tecnologias';
@@ -41,6 +43,8 @@ export type EventoProgreso = { tipo: 'captura'; via: 'https' | 'http'; ok: boole
 
 export interface DependenciasAnalisis {
   descargador: Descargador;
+  /** Si falta, no se mira el DNS (SPF, DMARC, CAA). */
+  resolvedor?: Resolvedor;
   ahora?: () => Date;
   /** Se llama cada vez que termina una de las dos capturas. Un fallo aquí no afecta al análisis. */
   alProgreso?: (evento: EventoProgreso) => void;
@@ -99,6 +103,9 @@ export async function analizarSitio(entrada: string, dependencias: DependenciasA
     }
     return resultado;
   };
+  const dnsPendiente = dependencias.resolvedor
+    ? capturarDns(host, dependencias.resolvedor).catch(() => null)
+    : Promise.resolve(null);
   const [https, http] = await Promise.all([
     dependencias.descargador(urlHttps, OPCIONES_HTTPS).then((r) => avisar('https', r)),
     dependencias.descargador(urlHttp, OPCIONES_HTTP).then((r) => avisar('http', r)),
@@ -107,10 +114,12 @@ export async function analizarSitio(entrada: string, dependencias: DependenciasA
   const error = noAnalizable(https, http);
   if (error) return { ok: false, error };
 
-  const captura: CapturaSitio = { host, https, http };
+  const dnsCapturado = await dnsPendiente;
+  const captura: CapturaSitio = { host, https, http, ...(dnsCapturado ? { dns: dnsCapturado } : {}) };
   const momento = ahora();
   const hallazgos = [
     ...comprobarHttps(captura, momento),
+    ...comprobarDns(captura),
     ...comprobarCabeceras(captura),
     ...comprobarCookies(captura),
     ...comprobarTecnologias(captura, momento),

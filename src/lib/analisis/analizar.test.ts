@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { OPCIONES_HTTP, OPCIONES_HTTPS, analizarSitio } from './analizar';
 import type { Descargador } from './descarga';
-import { AHORA, HTTP_REDIRIGE, bien, mal, respuesta, tls } from './pruebas/construir';
+import { AHORA, HTTP_REDIRIGE, bien, mal, resolvedorFalso, respuesta, tls } from './pruebas/construir';
 import type { ResultadoCaptura } from './tipos';
 
 /** Descargador falso: responde según el protocolo de la dirección pedida. */
@@ -31,6 +31,7 @@ describe('analizarSitio · camino feliz', () => {
     expect(i.hallazgos.length).toBeGreaterThan(10);
     expect(i.nota.categorias).toEqual([
       { id: 'https', puntos: 100 },
+      { id: 'dns', puntos: null },
       { id: 'cabeceras', puntos: 100 },
       { id: 'cookies', puntos: 100 },
       { id: 'privacidad', puntos: 100 },
@@ -163,5 +164,53 @@ describe('analizarSitio · progreso', () => {
     });
     const r = await analizarSitio('ejemplo.com', { ...falso(bien(respuesta())).deps, alProgreso });
     expect(r.ok).toBe(true);
+  });
+});
+
+describe('analizarSitio · DNS (SPF, DMARC, CAA)', () => {
+  const BUEN_DNS = resolvedorFalso({
+    txt: { 'ejemplo.com': [['v=spf1 mx -all']], '_dmarc.ejemplo.com': [['v=DMARC1; p=reject']] },
+    mx: { 'ejemplo.com': [{ exchange: 'mx.ejemplo.com', priority: 10 }] },
+    caa: { 'ejemplo.com': [{ issue: 'letsencrypt.org' }] },
+  });
+  const conDns = (resolvedor: ReturnType<typeof resolvedorFalso>) => {
+    const { deps } = falso(bien(respuesta()));
+    return analizarSitio('ejemplo.com', { ...deps, resolvedor });
+  };
+
+  it('con el DNS en regla la nota sigue siendo A+ y la categoría «dns» sale a 100', async () => {
+    const r = await conDns(BUEN_DNS);
+    if (!r.ok) throw new Error('se esperaba informe');
+    expect(r.informe.nota).toMatchObject({ puntos: 100, letra: 'A+' });
+    expect(r.informe.nota.categorias.find((c) => c.id === 'dns')?.puntos).toBe(100);
+  });
+
+  it('un dominio que recibe correo sin SPF ni DMARC pierde 14 de 135: (135 − 14) / 135 = 90', async () => {
+    const r = await conDns(resolvedorFalso({ mx: { 'ejemplo.com': [{ exchange: 'mx.ejemplo.com', priority: 10 }] }, caa: { 'ejemplo.com': [{ issue: 'x' }] } }));
+    if (!r.ok) throw new Error('se esperaba informe');
+    expect(r.informe.nota.puntos).toBe(90);
+    expect(r.informe.hallazgos.filter((h) => h.categoria === 'dns' && h.resultado === 'fallo').map((h) => h.id)).toEqual(['dns.spf', 'dns.dmarc']);
+  });
+
+  it('si el DNS no contesta, el análisis sigue y esas comprobaciones no aplican (sin castigo)', async () => {
+    const r = await conDns(resolvedorFalso({ txt: { 'ejemplo.com': 'ETIMEOUT', '_dmarc.ejemplo.com': 'ETIMEOUT' }, mx: { 'ejemplo.com': 'ETIMEOUT' }, caa: { 'ejemplo.com': 'ETIMEOUT' } }));
+    if (!r.ok) throw new Error('se esperaba informe');
+    expect(r.informe.hallazgos.filter((h) => h.categoria === 'dns').map((h) => h.resultado)).toEqual(['no-aplica', 'no-aplica', 'no-aplica']);
+    expect(r.informe.nota.puntos).toBe(100);
+    expect(r.informe.nota.categorias.find((c) => c.id === 'dns')?.puntos).toBeNull();
+  });
+
+  it('si el resolvedor lanza errores raros, el análisis no se cae y esas comprobaciones no aplican', async () => {
+    const roto = { ns: () => { throw new Error('boom'); }, txt: () => { throw new Error('boom'); }, mx: () => { throw new Error('boom'); }, caa: () => { throw new Error('boom'); } };
+    const { deps } = falso(bien(respuesta()));
+    const r = await analizarSitio('ejemplo.com', { ...deps, resolvedor: roto });
+    if (!r.ok) throw new Error('se esperaba informe');
+    expect(r.informe.hallazgos.some((h) => h.categoria === 'dns')).toBe(true);
+  });
+
+  it('una IP no tiene dominio: no se mira el DNS', async () => {
+    const { deps } = falso(bien(respuesta()));
+    const r = await analizarSitio('93.184.216.34', { ...deps, resolvedor: BUEN_DNS });
+    if (r.ok) expect(r.informe.hallazgos.some((h) => h.categoria === 'dns')).toBe(false);
   });
 });
