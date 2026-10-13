@@ -2,11 +2,11 @@
 
 Analizador gratuito de seguridad web. Pegas la dirección de una página y recibes, en segundos, una **nota de la A+ a la F** y un informe en lenguaje llano: qué falla, por qué importa y cómo se arregla.
 
-Es un análisis **pasivo**: equivale a visitar la página con un navegador (una o dos peticiones normales). No ataca, no prueba contraseñas ni busca archivos ocultos.
+Es un análisis **pasivo**: equivale a visitar la página con un navegador (una o dos peticiones normales). No ataca ni prueba contraseñas. Solo si la persona marca que es responsable de la web (o tiene permiso) se hace además una comprobación de archivos expuestos: una lista fija de 17 rutas, sin guardar ni mostrar nunca su contenido.
 
 ## Qué comprueba
 
-Ocho categorías, con un peso distinto cada comprobación:
+Ocho categorías (más una opcional, «Archivos expuestos»), con un peso distinto cada comprobación:
 
 | Categoría   | Ejemplos                                                                          |
 | ----------- | --------------------------------------------------------------------------------- |
@@ -18,6 +18,7 @@ Ocho categorías, con un peso distinto cada comprobación:
 | Privacidad  | Política de privacidad, cookies, aviso legal, rastreadores de terceros            |
 | Tecnologías | Versiones expuestas y librerías con fin de vida o vulnerabilidades conocidas (jQuery, jQuery UI, Bootstrap, AngularJS, Vue 2, Lodash, Moment.js, Handlebars)      |
 | Rendimiento | Compresión, caché, tamaño, adaptación a móvil                                     |
+| Archivos expuestos (opcional) | `.env`, `.git`, copias de seguridad, `phpinfo`, páginas de estado del servidor, `.DS_Store` |
 
 Los criterios y pesos están en [docs/CRITERIOS.md](docs/CRITERIOS.md).
 

@@ -22,6 +22,7 @@ Navegador ── POST /api/analizar ──▶ route.ts
   - `descarga.ts` es el único sitio que abre conexiones. Recibe la política de red y el resolutor por inyección, así se prueba con servidores locales.
   - `dns.ts` consulta registros mediante un resolvedor inyectable.
   - `comprobaciones/` son funciones puras `captura → hallazgos`, una por categoría, más `html.ts` (lector de etiquetas lineal) y `utiles.ts`.
+  - `comprobaciones/exposicion.ts` define las 17 rutas del sondeo opcional de archivos expuestos y sus firmas; la red la pone `analizar.ts` con el mismo descargador seguro.
   - `puntuacion.ts` convierte hallazgos en nota.
 - **`src/lib/textos`**: los textos para personas, indexados por identificador de hallazgo. Una prueba exige que todo identificador que el motor pueda emitir tenga texto.
 - **`src/lib/seguridad`**: CSP, comprobación de origen, identificación del visitante, lectura de cuerpo con tope.

@@ -12,6 +12,11 @@ Una herramienta que hace peticiones a direcciones elegidas por desconocidos es, 
 - Se revalida en cada redirección, con un máximo de saltos.
 - Límites de tiempo y de tamaño de lo descargado (también descomprimido).
 
+**Sondeo de archivos expuestos**
+- Solo con la casilla de permiso marcada (`permiso: true` en la petición). Es una declaración de la persona; el servidor no puede verificarla, así que se limita el daño posible: 17 rutas fijas en la raíz de la web, solo `GET`, sin redirecciones, 4 peticiones simultáneas como máximo, 4 s de plazo y 4 KB de lectura por ruta.
+- Pasa por el mismo descargador seguro (misma protección SSRF) y por el mismo límite de uso por visitante.
+- Lo leído se descarta tras reconocer la firma: no se guarda, no se registra y no sale en el informe.
+
 **Contra el abuso del servicio**
 
 - Comprobación de `Origin` contra `Host`, solo `application/json`, cuerpo de 4 KB como máximo y esquema Zod estricto.

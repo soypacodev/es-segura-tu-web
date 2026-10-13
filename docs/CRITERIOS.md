@@ -35,6 +35,14 @@ Algunos fallos son tan graves que ninguna otra virtud los compensa. Ponen un **t
 | Certificado caducado                                     | D     |
 | Cadena de certificados incompleta                        | C     |
 
+Con el sondeo de archivos expuestos activado (ver más abajo) se añaden:
+
+| Fallo | Techo |
+| --- | --- |
+| `.env` descargable | F |
+| Copias de seguridad o de configuración descargables | F |
+| Carpeta `.git` descargable | D |
+
 La cadena incompleta tiene un techo más suave porque los navegadores de escritorio suelen completarla solos, aunque falle en móviles, programas y correo.
 
 ## Honestidad ante lo que no se ve
@@ -48,3 +56,13 @@ La cadena incompleta tiene un techo más suave porque los navegadores de escrito
 Prima lo que más daño evita a una persona sin conocimientos técnicos: un HTTPS correcto, un certificado vigente y las cabeceras que frenan ataques comunes pesan más que los detalles de rendimiento o de privacidad formal. Una comprobación que depende de interpretar la página (por ejemplo, detectar un enlace legal) pesa menos que una que se lee directamente de una cabecera.
 
 Los pesos están junto al código de cada comprobación, en `src/lib/analisis/comprobaciones/`, y cada una tiene pruebas con sus casos buenos, malos y límite.
+
+## Archivos expuestos (opcional)
+
+Es la única comprobación que hace peticiones extra a la web, así que solo se ejecuta si quien analiza marca que es responsable de ella o tiene permiso. Es una declaración, no una verificación: el servidor no puede comprobarla.
+
+- **Lista fija de 17 rutas** en la raíz de la web (`/.env`, `/.git/HEAD`, `/.git/config`, copias de `wp-config.php`, volcados `.sql`, comprimidos de copia, `phpinfo`, `server-status`, `.DS_Store`…). No se adivinan nombres ni se rastrea.
+- **Solo cuenta un 200 con la firma del archivo** (por ejemplo, líneas `CLAVE=valor` para `.env`, o `PK` al inicio de un zip). Una web que responde 200 a todo no da falsos positivos.
+- **Nunca se guarda ni se muestra el contenido.** Se leen como máximo 4 KB, se miran y se descartan; el informe solo dice qué ruta está expuesta.
+- Un fallo de red, un plazo agotado o un 429/503 en alguna ruta deja ese grupo en «no aplica»: sin datos no se dice «todo bien».
+- Los aciertos de esta categoría suman a la nota; por eso una nota con el sondeo y otra sin él no son directamente comparables. La categoría solo aparece en el informe cuando se activa.
