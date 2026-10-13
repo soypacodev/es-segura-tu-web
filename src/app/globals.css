@@ -313,7 +313,31 @@ p {
   font-weight: 700;
 }
 
+.autor__subtitulo {
+  margin-top: 20px;
+  font-size: 1rem;
+}
+
+.autor__proyectos {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 0;
+  list-style: none;
+}
+
+.autor__proyectos span {
+  display: block;
+  color: var(--tinta-suave);
+  font-size: 0.95rem;
+}
+
+.autor__proyectos a {
+  font-weight: 700;
+}
+
 .autor__enlaces a,
+.autor__proyectos a,
 .pie a {
   display: inline-block;
   padding-block: 3px;

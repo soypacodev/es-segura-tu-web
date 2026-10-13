@@ -24,14 +24,22 @@ export function QuienEstaDetras({ asunto = 'Consulta desde «¿Es segura tu web?
               GitHub
             </a>
           </li>
-          {AUTOR.enlaces.map((e) => (
-            <li key={e.url}>
-              <a href={e.url} target="_blank" rel="noopener noreferrer" title={e.descripcion}>
-                {e.nombre}
-              </a>
-            </li>
-          ))}
         </ul>
+        {AUTOR.enlaces.length > 0 && (
+          <>
+            <h3 className="autor__subtitulo">Otros proyectos</h3>
+            <ul className="autor__proyectos">
+              {AUTOR.enlaces.map((e) => (
+                <li key={e.url}>
+                  <a href={e.url} target="_blank" rel="noopener noreferrer">
+                    {e.nombre}
+                  </a>
+                  <span>{e.descripcion}</span>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
       </div>
     </section>
   );
