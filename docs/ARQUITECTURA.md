@@ -16,7 +16,7 @@ Navegador ── POST /api/analizar ──▶ route.ts
 
 ## Capas
 
-- **`src/app`**: páginas y las rutas de API (`/api/analizar` y `/api/compartir`). `proxy.ts` añade la CSP con un nonce nuevo por petición.
+- **`src/app`**: páginas y rutas de API (`/api/analizar`, `/api/compartir` y `/api/mantener-activo`, la del cron diario). `icon.tsx`, `apple-icon.tsx` y los `opengraph-image.tsx` generan el icono y las vistas previas en el servidor. `proxy.ts` añade la CSP con un nonce nuevo por petición.
 - **`src/lib/analisis`**: el motor. Sin dependencias de React ni de Next.
   - `objetivo.ts` valida y normaliza lo que escribe la persona.
   - `descarga.ts` es el único sitio que abre conexiones. Recibe la política de red y el resolutor por inyección, así se prueba con servidores locales.
@@ -25,8 +25,9 @@ Navegador ── POST /api/analizar ──▶ route.ts
   - `comprobaciones/exposicion.ts` define las 17 rutas del sondeo opcional de archivos expuestos y sus firmas; la red la pone `analizar.ts` con el mismo descargador seguro.
   - `puntuacion.ts` convierte hallazgos en nota.
 - **`src/lib/textos`**: los textos para personas, indexados por identificador de hallazgo. Una prueba exige que todo identificador que el motor pueda emitir tenga texto.
-- **`src/lib/compartir`**: el enlace compartible. `firma.ts` (HMAC), `almacen.ts` (interfaz y adaptadores: Supabase por REST y memoria), `config.ts` (variables de entorno), `servicio.ts` (reglas: firma válida y sin archivos expuestos) e `instancia.ts` (singleton de servidor). La página `/informe/[id]` solo lee.
+- **`src/lib/compartir`**: el enlace compartible. `firma.ts` (HMAC), `almacen.ts` (interfaz y adaptadores: Supabase por REST y memoria), `config.ts` (variables de entorno), `servicio.ts` (reglas: firma válida y sin archivos expuestos) `instancia.ts` (singleton de servidor), `vista-previa.tsx` (imágenes para redes y mensajería, con las fuentes de `assets/fuentes`) y `mantener-activo.ts` (la consulta diaria que evita que Supabase gratuito pause el proyecto). La página `/informe/[id]` solo lee.
 - **`src/lib/seguridad`**: CSP, comprobación de origen, identificación del visitante, lectura de cuerpo con tope.
+- **`src/lib/icono-marca.tsx`**: el icono de la marca, una sola pieza para favicon, iOS y cabecera.
 - **`src/componentes`**: interfaz. El informe se pinta a partir de los hallazgos y sus textos.
 
 ## Decisiones
