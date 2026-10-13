@@ -1,7 +1,7 @@
 import { ImageResponse } from 'next/og';
 import { esIdValido } from '@/lib/compartir/almacen';
 import { obtenerCompartir } from '@/lib/compartir/instancia';
-import { TAMANO_VISTA_PREVIA, VistaPrevia } from '@/lib/compartir/vista-previa';
+import { TAMANO_VISTA_PREVIA, VistaPrevia, fuentesVistaPrevia } from '@/lib/compartir/vista-previa';
 
 export const alt = 'Informe de seguridad web';
 export const size = TAMANO_VISTA_PREVIA;
@@ -15,5 +15,8 @@ export default async function Imagen({ params }: { params: Promise<{ id: string 
   // Sin informe (no existe o caducó) no se dibuja nada que delate nada: respuesta vacía de «no encontrado».
   if (!guardado) return new Response(null, { status: 404 });
   const { informe } = guardado;
-  return new ImageResponse(<VistaPrevia host={informe.objetivo.host} letra={informe.nota.letra} puntos={informe.nota.puntos} />, { ...size });
+  return new ImageResponse(<VistaPrevia host={informe.objetivo.host} letra={informe.nota.letra} puntos={informe.nota.puntos} />, {
+    ...size,
+    fonts: await fuentesVistaPrevia(),
+  });
 }
