@@ -37,6 +37,11 @@ export function Pie() {
           </span>
         ))}
       </p>
+      <p className="pie__legal">
+        <Link href="/privacidad">Privacidad</Link>
+        {' · '}
+        <Link href="/aviso-legal">Aviso legal</Link>
+      </p>
     </footer>
   );
 }

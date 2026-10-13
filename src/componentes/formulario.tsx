@@ -51,7 +51,7 @@ export function Formulario({ ocupado, error, alEnviar }: Props) {
       <div className="permiso">
         <input id={idPermiso} className="permiso__casilla" type="checkbox" checked={permiso} onChange={(e) => setPermiso(e.target.checked)} />
         <label htmlFor={idPermiso} className="permiso__texto">
-          <strong>Soy responsable de esta web o tengo permiso para revisarla a fondo</strong>
+          <strong>Soy responsable de esta web o tengo permiso de su titular para revisarla a fondo</strong>
           <span>
             Además, comprobaremos si hay archivos privados a la vista (claves, copias de seguridad, historial del código). Son unas 17 peticiones a tu
             web y no guardamos ni mostramos lo que contienen.
@@ -64,7 +64,9 @@ export function Formulario({ ocupado, error, alEnviar }: Props) {
           {error.texto && <span>{error.texto}</span>}
         </p>
       ) : (
-        <p className="formulario__nota">Gratis y sin registro. Tarda unos segundos.</p>
+        <p className="formulario__nota">
+          Gratis y sin registro. Tarda unos segundos. Al marcar la casilla declaras que es así y aceptas las <a href="/aviso-legal">condiciones de uso</a>.
+        </p>
       )}
     </form>
   );
