@@ -119,7 +119,7 @@ describe('almacén en memoria', () => {
 });
 
 describe('almacén Supabase', () => {
-  const clave = 'clave-de-servicio';
+  const clave = 'eyJ.clave.de-servicio';
   const caduca = new Date(AHORA.getTime() + 86_400_000);
   it('guarda con POST a la tabla «informes» y la clave de servicio', async () => {
     const peticion = vi.fn(async () => new Response(null, { status: 201 }));
@@ -130,6 +130,16 @@ describe('almacén Supabase', () => {
     expect(init.method).toBe('POST');
     expect(init.headers).toMatchObject({ apikey: clave, Authorization: `Bearer ${clave}`, Prefer: 'return=minimal' });
     expect(JSON.parse(init.body as string)).toMatchObject({ id, caduca: caduca.toISOString(), informe: { objetivo: { host: 'ejemplo.com' } } });
+  });
+  it('con una clave nueva (no JWT) envía solo «apikey»; con una JWT antigua, también «Authorization»', async () => {
+    const peticion = vi.fn(async () => new Response(null, { status: 201 }));
+    await crearAlmacenSupabase('https://abc.supabase.co', 'sb_secret_abc', peticion).guardar(crearId(), informe(), AHORA, caduca);
+    const [, nueva] = peticion.mock.calls[0] as unknown as [string, RequestInit];
+    expect(nueva.headers).toEqual(expect.objectContaining({ apikey: 'sb_secret_abc' }));
+    expect(nueva.headers).not.toHaveProperty('Authorization');
+    await crearAlmacenSupabase('https://abc.supabase.co', 'eyJ.x.y', peticion).guardar(crearId(), informe(), AHORA, caduca);
+    const [, vieja] = peticion.mock.calls[1] as unknown as [string, RequestInit];
+    expect(vieja.headers).toMatchObject({ Authorization: 'Bearer eyJ.x.y' });
   });
   it('falla (sin filtrar el cuerpo de la respuesta) si Supabase rechaza', async () => {
     const peticion = vi.fn(async () => new Response('secreto-del-servidor', { status: 401 }));

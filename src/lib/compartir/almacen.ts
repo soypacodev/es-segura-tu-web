@@ -53,7 +53,9 @@ const TIEMPO_MAX_MS = 5000;
  * La tabla tiene RLS activado y ninguna política: sin esta clave nadie puede leerla ni escribirla.
  */
 export function crearAlmacenSupabase(url: string, clave: string, peticion: Peticion = fetch): Almacen {
-  const cabeceras = { apikey: clave, Authorization: `Bearer ${clave}`, 'Content-Type': 'application/json' };
+  // Las claves nuevas de Supabase («sb_secret_…») no son JWT y van solo en «apikey»; las antiguas (JWT «eyJ…») también en «Authorization».
+  const cabeceras: Record<string, string> = { apikey: clave, 'Content-Type': 'application/json' };
+  if (clave.startsWith('eyJ')) cabeceras.Authorization = `Bearer ${clave}`;
   const base = `${url}/rest/v1/informes`;
   return {
     async guardar(id, informe, creado, caduca) {
