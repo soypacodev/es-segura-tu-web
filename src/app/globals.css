@@ -257,6 +257,70 @@ p {
   white-space: nowrap;
 }
 
+.autor {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+  padding: 28px 32px;
+  border: 1px solid var(--linea);
+  border-radius: 18px;
+  background: var(--superficie);
+}
+
+.autor__avatar {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--panel);
+  color: var(--panel-texto);
+  font-family: var(--letra-titulo);
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.autor__titulo {
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.autor__nombre {
+  margin-top: 6px;
+  font-weight: 700;
+}
+
+.autor__nombre span {
+  font-weight: 400;
+  color: var(--tinta-suave);
+}
+
+.autor__texto {
+  margin-top: 8px;
+  max-width: 62ch;
+  color: var(--tinta-suave);
+}
+
+.autor__enlaces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin-top: 14px;
+  padding: 0;
+  list-style: none;
+  font-weight: 700;
+}
+
+.autor__enlaces a,
+.pie a {
+  display: inline-block;
+  padding-block: 3px;
+  color: var(--accion);
+  text-underline-offset: 3px;
+}
+
 .boton--enlace {
   display: inline-flex;
   align-items: center;
@@ -894,6 +958,10 @@ p {
   animation: despliega 0.22s ease-out both;
 }
 
+.fila__detalle[hidden] {
+  display: none;
+}
+
 @keyframes despliega {
   from {
     opacity: 0;
@@ -1070,6 +1138,10 @@ p {
 }
 
 @media (max-width: 560px) {
+  .autor {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 24px;
+  }
   .formulario__fila {
     flex-direction: column;
   }
@@ -1271,4 +1343,220 @@ html:has(.barra-simulador) {
   html:has(.barra-simulador) {
     scroll-padding-bottom: 190px;
   }
+}
+
+/* ---------- Acciones del informe ---------- */
+
+.panel-nota__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.solo-impresion {
+  display: none;
+}
+
+/* ---------- Impresión y PDF ---------- */
+/* El informe es lo que la persona reenvía: en papel o en PDF sale sin interfaz, con todo desplegado y con la firma al pie. */
+
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm 12mm 18mm;
+
+    @bottom-center {
+      content: 'Informe de seguridad web · Paco López · soypacodev@gmail.com · Página ' counter(page) ' de ' counter(pages);
+      font: 9pt sans-serif;
+      color: #4a5573;
+    }
+  }
+
+  :root {
+    color-scheme: light;
+    --fondo: #ffffff;
+    --superficie: #ffffff;
+    --superficie-2: #eef2f6;
+    --tinta: #101a33;
+    --tinta-suave: #4a5573;
+    --linea: #d3dae6;
+    --accion: #1a3fc4;
+    --panel: #101a33;
+    --panel-2: #1b2748;
+    --nota-aplus: #13795b;
+    --nota-a: #2e9e5b;
+    --nota-b: #8db82e;
+    --nota-c: #d9a400;
+    --nota-d: #e46f1f;
+    --nota-f: #d3362b;
+  }
+
+  * {
+    animation: none !important;
+    transition: none !important;
+    box-shadow: none !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  body {
+    background: #ffffff;
+    color: var(--tinta);
+    font-size: 11pt;
+  }
+
+  .cabecera,
+  .pie,
+  .portada,
+  .no-imprimir,
+  .barra-simulador,
+  .simula,
+  .simula-todo,
+  .codigo__copiar,
+  .contrata,
+  .solo-lectores,
+  .fila__resumen,
+  .recorrido__nota,
+  noscript {
+    display: none !important;
+  }
+
+  .solo-impresion {
+    display: block;
+  }
+
+  .contenedor {
+    padding: 0;
+    max-width: none;
+  }
+
+  .informe {
+    gap: 22px;
+    padding-block: 0;
+  }
+
+  .informe-impreso {
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--tinta);
+  }
+
+  .informe-impreso__marca {
+    font-size: 10pt;
+    font-weight: 700;
+    color: var(--tinta-suave);
+  }
+
+  .informe-impreso__host {
+    margin-top: 4px;
+    font-family: var(--letra-titulo);
+    font-size: 22pt;
+    font-weight: 800;
+    overflow-wrap: anywhere;
+  }
+
+  .informe-impreso__fecha,
+  .informe-impreso__aviso {
+    color: var(--tinta-suave);
+    font-size: 9.5pt;
+  }
+
+  .fila__detalle,
+  .fila__detalle[hidden] {
+    display: grid !important;
+  }
+
+  .fila,
+  .urgente,
+  .grupo__titulo,
+  .autor,
+  .categoria__cabecera {
+    break-inside: avoid;
+  }
+
+  .grupo__titulo,
+  .seccion__titulo {
+    break-after: avoid;
+  }
+
+  .panel-nota {
+    break-inside: avoid;
+  }
+
+  .panel-nota,
+  .autor {
+    border: 1px solid var(--linea);
+  }
+
+  .autor__enlaces a {
+    color: var(--accion);
+    text-decoration: none;
+  }
+}
+
+/* ---------- Enlace para compartir ---------- */
+
+.compartir {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  max-width: 560px;
+}
+
+.compartir__etiqueta {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.compartir__fila {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.compartir__campo {
+  flex: 1 1 220px;
+  min-width: 0;
+  padding: 9px 12px;
+  border-radius: var(--radio);
+  border: 1px solid var(--panel-linea, rgba(255, 255, 255, 0.25));
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.9rem;
+}
+
+.compartir__nota {
+  margin: 0;
+  font-size: 0.9rem;
+  opacity: 0.85;
+}
+
+.compartir__error {
+  margin: 0;
+  font-weight: 700;
+  color: #ffb4a8;
+}
+
+.compartido {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+  margin-bottom: 24px;
+  padding: 16px 20px;
+  border: 1px solid var(--linea);
+  border-radius: var(--radio);
+  background: var(--superficie);
+}
+
+.compartido p {
+  margin: 0;
+  max-width: 62ch;
+}
+
+.compartido .boton--enlace {
+  margin-top: 0;
 }
