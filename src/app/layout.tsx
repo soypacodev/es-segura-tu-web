@@ -6,7 +6,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: '¿Es segura tu web? Revisión gratuita de seguridad',
-  description: 'Pega la dirección de tu web y recibe una nota de la A a la F, con lo que significa cada punto y cómo arreglarlo. Gratis y sin registro.',
+  description: 'Pega la dirección de tu web y recibe una nota de la A+ a la F, con lo que significa cada punto y cómo arreglarlo. Gratis y sin registro.',
   applicationName: '¿Es segura tu web?',
   authors: [{ name: 'Paco López' }],
   openGraph: {
@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     locale: 'es_ES',
     siteName: '¿Es segura tu web?',
     title: '¿Es segura tu web? Revisión gratuita de seguridad',
-    description: 'Una nota de la A a la F para tu web, con lo que significa cada punto y cómo arreglarlo. Gratis y sin registro.',
+    description: 'Una nota de la A+ a la F para tu web, con lo que significa cada punto y cómo arreglarlo. Gratis y sin registro.',
   },
   // La portada es lo único que debe aparecer en buscadores.
   robots: { index: true, follow: true },

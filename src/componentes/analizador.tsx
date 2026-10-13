@@ -134,7 +134,7 @@ export function Analizador() {
       <div className={`portada${informe ? ' portada--con-informe' : ''}`}>
         <div>
           <h1 className="portada__titulo">¿Es segura tu web?</h1>
-          <p className="portada__texto">Pega la dirección y te ponemos nota de la A a la F, con lo que significa y cómo arreglarlo.</p>
+          <p className="portada__texto">Pega la dirección y te ponemos nota de la A+ a la F, con lo que significa y cómo arreglarlo.</p>
           <Formulario ocupado={analizando} error={estado.fase === 'error' ? { titulo: estado.titulo, texto: estado.texto } : null} alEnviar={analizar} />
           {estado.fase === 'analizando' && <Progreso pasos={estado.pasos} />}
         </div>
