@@ -151,6 +151,7 @@ p {
 }
 
 .marca-web__icono {
+  display: flex;
   width: 28px;
   height: 28px;
 }
@@ -268,18 +269,12 @@ p {
   background: var(--superficie);
 }
 
-.autor__avatar {
-  display: grid;
-  place-items: center;
-  width: 64px;
-  height: 64px;
+.autor__foto {
+  width: 80px;
+  height: 80px;
   border-radius: 50%;
-  background: var(--panel);
-  color: var(--panel-texto);
-  font-family: var(--letra-titulo);
-  font-size: 1.5rem;
-  font-weight: 800;
-  letter-spacing: 0.02em;
+  object-fit: cover;
+  background: var(--superficie-2);
 }
 
 .autor__titulo {

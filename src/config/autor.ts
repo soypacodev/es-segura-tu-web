@@ -14,6 +14,8 @@ export const AUTOR = {
   titular: 'Desarrollador full-stack',
   descripcion:
     'Hago webs y aplicaciones a medida para pequeños negocios, y me encargo de que sean seguras, rápidas y fáciles de mantener. Esta herramienta es gratuita; si quieres que alguien arregle lo que aparece en tu informe, escríbeme.',
+  /** Foto (en /public); la misma que en GitHub. */
+  foto: '/paco-lopez.jpg',
   correo: 'soypacodev@gmail.com',
   github: 'https://github.com/soypacodev',
   /** Otros proyectos (el portfolio, cuando exista, va el primero). */
@@ -30,14 +32,6 @@ export const AUTOR = {
     },
   ] as readonly EnlaceAutor[],
 } as const;
-
-/** Las iniciales para el avatar, a partir del nombre. */
-export const INICIALES_AUTOR = AUTOR.nombre
-  .split(/\s+/)
-  .map((p) => p[0])
-  .join('')
-  .slice(0, 2)
-  .toUpperCase();
 
 /** Enlace de correo con asunto y cuerpo ya escritos. */
 export function enlaceCorreo(asunto: string, cuerpo?: string): string {

@@ -1,12 +1,11 @@
-import { AUTOR, INICIALES_AUTOR, enlaceCorreo } from '@/config/autor';
+import { AUTOR, enlaceCorreo } from '@/config/autor';
 
 /** Tarjeta con quién hizo la herramienta y cómo contactar. Sin estado: sirve en servidor y en cliente. */
 export function QuienEstaDetras({ asunto = 'Consulta desde «¿Es segura tu web?»' }: { asunto?: string }) {
   return (
     <section className="autor" aria-labelledby="titulo-autor">
-      <div className="autor__avatar" aria-hidden="true">
-        {INICIALES_AUTOR}
-      </div>
+      {/* eslint-disable-next-line @next/next/no-img-element -- foto fija de 192 px: no necesita optimización */}
+      <img className="autor__foto" src={AUTOR.foto} alt={`Foto de ${AUTOR.nombre}`} width={96} height={96} />
       <div className="autor__cuerpo">
         <h2 id="titulo-autor" className="autor__titulo">
           Quién está detrás

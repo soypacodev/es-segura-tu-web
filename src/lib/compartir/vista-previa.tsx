@@ -25,6 +25,12 @@ export async function fuentesVistaPrevia() {
   ];
 }
 
+/** La foto del autor, incrustada (la imagen se genera en el servidor, sin pedir nada por red). */
+export async function fotoVistaPrevia(): Promise<string> {
+  const datos = await readFile(join(process.cwd(), 'public/paco-lopez.jpg'));
+  return `data:image/jpeg;base64,${datos.toString('base64')}`;
+}
+
 /** Una barra de la escala con punta de flecha, como en la portada. */
 function Barra({ letra, ancho, alto, activa }: { letra: Letra; ancho: number; alto: number; activa: boolean }) {
   const color = activa ? COLOR[letra] : `${COLOR[letra]}55`;
@@ -55,7 +61,7 @@ function Barra({ letra, ancho, alto, activa }: { letra: Letra; ancho: number; al
  * Imagen que ven quienes reciben el enlace (WhatsApp, Slack, LinkedIn…).
  * WhatsApp recorta un cuadrado del centro: la nota y la web van ahí; la escala y la firma, a los lados.
  */
-export function VistaPrevia({ host, letra, puntos }: { host: string; letra: Letra; puntos: number }) {
+export function VistaPrevia({ host, letra, puntos, foto }: { host: string; letra: Letra; puntos: number; foto?: string }) {
   const tamanoHost = host.length > 44 ? 30 : host.length > 30 ? 38 : host.length > 22 ? 46 : 56;
   return (
     <div style={{ display: 'flex', width: '100%', height: '100%', background: FONDO, color: '#ffffff', fontFamily: 'Atkinson' }}>
@@ -111,11 +117,55 @@ export function VistaPrevia({ host, letra, puntos }: { host: string; letra: Letr
           alignItems: 'flex-end',
         }}
       >
+        {/* eslint-disable-next-line @next/next/no-img-element -- dentro de la imagen generada no existe <Image> */}
+        {foto && <img src={foto} width={76} height={76} alt="" style={{ borderRadius: 38, marginBottom: 16 }} />}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', fontFamily: 'Bricolage', fontSize: 32, lineHeight: 1.1 }}>
           <span>¿Es segura</span>
           <span>tu web?</span>
         </div>
         <div style={{ display: 'flex', marginTop: 8, fontSize: 22, color: SUAVE }}>por Paco López</div>
+      </div>
+    </div>
+  );
+}
+
+/** Imagen de la portada (al compartir la dirección de la web, y para GitHub): la escala, el nombre y la firma. */
+export function VistaPreviaPortada({ foto, ancho = 1200 }: { foto?: string; ancho?: number }) {
+  const lado = (ancho - 660) / 2;
+  return (
+    <div style={{ display: 'flex', width: '100%', height: '100%', background: FONDO, color: '#ffffff', fontFamily: 'Atkinson' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 10, width: lado, paddingLeft: 48 }}>
+        {LETRAS_DE_MEJOR_A_PEOR.map((l, i) => (
+          <Barra key={l} letra={l} ancho={70 + i * 22} alto={46} activa />
+        ))}
+      </div>
+      <div
+        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: 660, padding: '0 30px', textAlign: 'center' }}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', fontFamily: 'Bricolage', fontSize: 96, lineHeight: 0.98 }}>
+          <span>¿Es segura</span>
+          <span>tu web?</span>
+        </div>
+        <div style={{ display: 'flex', marginTop: 30, fontSize: 32, color: SUAVE, maxWidth: 560, lineHeight: 1.3, justifyContent: 'center' }}>
+          Revisión gratuita de seguridad: nota de la A+ a la F y cómo arreglar cada punto
+        </div>
+        <div style={{ display: 'flex', marginTop: 28, fontSize: 26, fontWeight: 700 }}>es-segura-tu-web.vercel.app</div>
+      </div>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'flex-end',
+          width: lado,
+          padding: '0 48px 56px 0',
+          textAlign: 'right',
+          alignItems: 'flex-end',
+        }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element -- dentro de la imagen generada no existe <Image> */}
+        {foto && <img src={foto} width={76} height={76} alt="" style={{ borderRadius: 38, marginBottom: 16 }} />}
+        <div style={{ display: 'flex', fontSize: 24, fontWeight: 700 }}>Paco López</div>
+        <div style={{ display: 'flex', marginTop: 4, fontSize: 20, color: SUAVE }}>Desarrollador full-stack</div>
       </div>
     </div>
   );

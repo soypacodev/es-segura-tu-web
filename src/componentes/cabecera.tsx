@@ -1,15 +1,14 @@
 import Link from 'next/link';
 import { AUTOR } from '@/config/autor';
+import { IconoMarca } from '@/lib/icono-marca';
 
 export function Cabecera() {
   return (
     <header className="cabecera">
       <Link className="marca-web" href="/">
-        <svg className="marca-web__icono" viewBox="0 0 32 32" aria-hidden="true">
-          <path d="M3 5h11l3 2.5L14 10H3z" fill="var(--nota-a)" />
-          <path d="M3 13.5h17l3 2.5-3 2.5H3z" fill="var(--nota-c)" />
-          <path d="M3 22h23l3 2.5-3 2.5H3z" fill="var(--nota-f)" />
-        </svg>
+        <span className="marca-web__icono" aria-hidden="true">
+          <IconoMarca tamano={28} />
+        </span>
         ¿Es segura tu web?
       </Link>
     </header>
