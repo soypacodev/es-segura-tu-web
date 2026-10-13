@@ -58,6 +58,12 @@ function manejar(req: http.IncomingMessage, res: http.ServerResponse) {
     case '/json':
       res.writeHead(200, { 'content-type': 'application/json' });
       return res.end('{"a":1}');
+    case '/binario':
+      res.writeHead(200, { 'content-type': 'application/zip' });
+      return res.end(Buffer.from([0x50, 0x4b, 0x03, 0x04, 0xff, 0x00, 0x80]));
+    case '/texto-env':
+      res.writeHead(200, { 'content-type': 'text/plain' });
+      return res.end('DB_PASSWORD=secreto\n' + 'x'.repeat(10_000));
     case '/204':
       res.writeHead(204);
       return res.end();
@@ -202,6 +208,27 @@ describe('descarga · respuestas normales', () => {
     expect(r.cuerpo).toBeNull();
     expect(r.estadoCuerpo).toBe('omitido');
     expect(r.bytesLeidos).toBe(0);
+  });
+
+  it('con cuerpo «bytes» lee cualquier tipo de contenido byte a byte, con tope', async () => {
+    expect((await exito('/json', { cuerpo: 'bytes' })).cuerpo).toBe('{"a":1}');
+    expect((await exito('/binario', { cuerpo: 'bytes' })).cuerpo).toBe('PK\x03\x04\xff\x00\x80');
+    const r = await exito('/texto-env', { cuerpo: 'bytes', maxBytes: 4096 });
+    expect(r.cuerpo?.startsWith('DB_PASSWORD=secreto')).toBe(true);
+    expect(r.bytesLeidos).toBe(4096);
+    expect(r.estadoCuerpo).toBe('recortado');
+  });
+
+  it('con cuerpo «bytes» solo lee las respuestas 200', async () => {
+    for (const ruta of ['/204', '/no-existe', '/a']) {
+      const r = await exito(ruta, { cuerpo: 'bytes', seguirRedirecciones: 0 });
+      expect(r.cuerpo).toBeNull();
+      expect(r.estadoCuerpo).toBe('omitido');
+    }
+  });
+
+  it('por defecto («html») un archivo binario no se lee', async () => {
+    expect((await exito('/binario')).cuerpo).toBeNull();
   });
 
   it('no lee el cuerpo de una respuesta que no es 2xx', async () => {

@@ -14,7 +14,8 @@ export const maxDuration = 30;
 
 const MAX_BYTES_PETICION = 4096;
 // El largo de la dirección lo valida normalizarObjetivo (que da el motivo «demasiado-largo»); aquí el tope es el del cuerpo.
-const Peticion = z.object({ direccion: z.string() }).strict();
+// «permiso»: la persona declara que es responsable de la web o que tiene permiso para revisarla a fondo (archivos expuestos).
+const Peticion = z.object({ direccion: z.string(), permiso: z.boolean().optional() }).strict();
 
 const limitador = crearLimitador();
 
@@ -76,6 +77,7 @@ export async function POST(peticion: Request) {
         const resultado = await analizarSitio(datos.direccion, {
           descargador: descargadorSeguro,
           resolvedor,
+          sondearArchivos: datos.permiso === true,
           alProgreso: (e) => enviar({ t: 'captura', via: e.via, ok: e.ok }),
         });
         enviar(resultado.ok ? { t: 'informe', informe: resultado.informe } : { t: 'error', error: resultado.error });

@@ -9,6 +9,7 @@ import { comprobarDns } from './comprobaciones/dns';
 import { capturarDns, type Resolvedor } from './dns';
 import { comprobarContenido } from './comprobaciones/contenido';
 import { comprobarRendimiento } from './comprobaciones/rendimiento';
+import { clasificarSondeo, comprobarExposicion, MAX_BYTES_SONDEO, SONDAS } from './comprobaciones/exposicion';
 import { comprobarCookies } from './comprobaciones/cookies';
 import { comprobarPrivacidad } from './comprobaciones/privacidad';
 import { comprobarTecnologias } from './comprobaciones/tecnologias';
@@ -16,12 +17,17 @@ import { comprobarHttps } from './comprobaciones/https';
 import type { Descargador, OpcionesDescarga } from './descarga';
 import { normalizarObjetivo, type MotivoObjetivo } from './objetivo';
 import { calcularNota, type Nota } from './puntuacion';
-import type { Aviso, CapturaSitio, Hallazgo, ResultadoCaptura } from './tipos';
+import type { Aviso, CapturaSitio, Hallazgo, ResultadoCaptura, Sondeo } from './tipos';
 
 /** Por HTTPS se sigue la cadena de redirecciones y se lee la página. */
 export const OPCIONES_HTTPS: OpcionesDescarga = { seguirRedirecciones: 5, maxBytes: 1_000_000, tiempoMs: 15_000 };
 /** Por HTTP solo interesa a dónde manda: no se sigue ni se lee casi nada. */
 export const OPCIONES_HTTP: OpcionesDescarga = { seguirRedirecciones: 0, maxBytes: 65_536, tiempoMs: 8_000 };
+
+/** Cada archivo del sondeo: sin seguir redirecciones (un salto no es el archivo) y con poco plazo. */
+const OPCIONES_SONDEO: OpcionesDescarga = { seguirRedirecciones: 0, maxBytes: MAX_BYTES_SONDEO, tiempoMs: 4_000, cuerpo: 'bytes' };
+/** Peticiones simultáneas del sondeo a una misma web. */
+const SIMULTANEAS_SONDEO = 4;
 
 export interface Informe {
   version: 1;
@@ -50,6 +56,30 @@ export interface DependenciasAnalisis {
   ahora?: () => Date;
   /** Se llama cada vez que termina una de las dos capturas. Un fallo aquí no afecta al análisis. */
   alProgreso?: (evento: EventoProgreso) => void;
+  /**
+   * Busca archivos que no deberían ser públicos (.env, .git, copias de seguridad…). Hace peticiones extra a la web,
+   * así que solo debe activarse si quien analiza ha declarado que es responsable de ella o tiene permiso.
+   */
+  sondearArchivos?: boolean;
+}
+
+/** Pide cada archivo de la lista, de pocos en pocos, y anota qué se vio (sin guardar el contenido). */
+export async function sondearArchivos(host: string, descargador: Descargador): Promise<Sondeo[]> {
+  const resultados: Sondeo[] = new Array<Sondeo>(SONDAS.length);
+  let siguiente = 0;
+  const trabajador = async () => {
+    for (;;) {
+      const i = siguiente++;
+      if (i >= SONDAS.length) return;
+      const sonda = SONDAS[i];
+      const captura = await descargador(new URL(`https://${host}${sonda.ruta}`), OPCIONES_SONDEO).catch(
+        (): ResultadoCaptura => ({ ok: false, error: { codigo: 'conexion', mensaje: 'fallo inesperado' } }),
+      );
+      resultados[i] = { grupo: sonda.grupo, ruta: sonda.ruta, estado: clasificarSondeo(sonda, captura) };
+    }
+  };
+  await Promise.all(Array.from({ length: SIMULTANEAS_SONDEO }, trabajador));
+  return resultados;
 }
 
 const AMBIGUOS: ReadonlySet<string> = new Set(['tiempo-agotado', 'redirecciones', 'respuesta-invalida']);
@@ -115,6 +145,7 @@ export async function analizarSitio(entrada: string, dependencias: DependenciasA
   const dnsPendiente = dependencias.resolvedor
     ? capturarDns(host, dependencias.resolvedor).catch(() => null)
     : Promise.resolve(null);
+  const sondeosPendientes = dependencias.sondearArchivos ? sondearArchivos(host, dependencias.descargador) : Promise.resolve(undefined);
   const [https, http] = await Promise.all([
     dependencias.descargador(urlHttps, OPCIONES_HTTPS).then((r) => avisar('https', r)),
     dependencias.descargador(urlHttp, OPCIONES_HTTP).then((r) => avisar('http', r)),
@@ -123,8 +154,8 @@ export async function analizarSitio(entrada: string, dependencias: DependenciasA
   const error = noAnalizable(https, http);
   if (error) return { ok: false, error };
 
-  const dnsCapturado = await dnsPendiente;
-  const captura: CapturaSitio = { host, https, http, ...(dnsCapturado ? { dns: dnsCapturado } : {}) };
+  const [dnsCapturado, sondeos] = await Promise.all([dnsPendiente, sondeosPendientes]);
+  const captura: CapturaSitio = { host, https, http, ...(dnsCapturado ? { dns: dnsCapturado } : {}), ...(sondeos ? { sondeos } : {}) };
   const momento = ahora();
   const hallazgos = [
     ...comprobarHttps(captura, momento),
@@ -135,6 +166,7 @@ export async function analizarSitio(entrada: string, dependencias: DependenciasA
     ...comprobarTecnologias(captura, momento),
     ...comprobarPrivacidad(captura),
     ...comprobarRendimiento(captura, OPCIONES_HTTPS.maxBytes),
+    ...comprobarExposicion(captura),
   ];
 
   return {

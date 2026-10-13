@@ -38,6 +38,7 @@ describe('analizarSitio · camino feliz', () => {
       { id: 'privacidad', puntos: 100 },
       { id: 'tecnologias', puntos: 100 },
       { id: 'rendimiento', puntos: 100 },
+      { id: 'exposicion', puntos: null },
     ]);
   });
 
@@ -238,5 +239,100 @@ describe('analizarSitio · DNS (SPF, DMARC, CAA)', () => {
     const { deps } = falso(bien(respuesta()));
     const r = await analizarSitio('93.184.216.34', { ...deps, resolvedor: BUEN_DNS });
     if (r.ok) expect(r.informe.hallazgos.some((h) => h.categoria === 'dns')).toBe(false);
+  });
+});
+
+describe('analizarSitio · archivos expuestos (solo con permiso)', () => {
+  const SECRETO = 'DB_PASSWORD=contraseña-muy-secreta-123';
+  const noEncontrado = bien(respuesta({ estado: 404, cabeceras: { 'content-type': ['text/html'] }, cuerpo: null, estadoCuerpo: 'omitido' }));
+
+  /** Un sitio normal cuyas rutas privadas contestan según `sondas` (por defecto, 404). */
+  function conSondeo(sondas: Record<string, ResultadoCaptura | (() => ResultadoCaptura)> = {}) {
+    let enCurso = 0;
+    let maxEnCurso = 0;
+    const descargador = vi.fn<Descargador>(async (url, opciones) => {
+      if (opciones.cuerpo !== 'bytes') return url.protocol === 'https:' ? bien(respuesta()) : HTTP_REDIRIGE;
+      enCurso++;
+      maxEnCurso = Math.max(maxEnCurso, enCurso);
+      await new Promise((r) => setTimeout(r, 2));
+      enCurso--;
+      const dato = sondas[url.pathname];
+      return dato === undefined ? noEncontrado : typeof dato === 'function' ? dato() : dato;
+    });
+    return { descargador, maximo: () => maxEnCurso };
+  }
+  const analizarCon = (d: Descargador, sondearArchivos: boolean) => analizarSitio('ejemplo.com', { descargador: d, ahora: () => AHORA, sondearArchivos });
+  const obtener = async (d: Descargador, sondear: boolean) => {
+    const r = await analizarCon(d, sondear);
+    if (!r.ok) throw new Error(JSON.stringify(r.error));
+    return r.informe;
+  };
+
+  it('sin permiso no se pide ninguna ruta privada ni aparece la categoría', async () => {
+    const { descargador } = conSondeo();
+    const inf = await obtener(descargador, false);
+    expect(descargador).toHaveBeenCalledTimes(2);
+    expect(inf.hallazgos.some((h) => h.categoria === 'exposicion')).toBe(false);
+    expect(inf.nota.categorias.find((c) => c.id === 'exposicion')?.puntos).toBeNull();
+  });
+
+  it('con permiso pide solo las rutas de la lista, por HTTPS, sin seguir redirecciones y con poco plazo y tope', async () => {
+    const { descargador } = conSondeo();
+    await obtener(descargador, true);
+    const sondeos = descargador.mock.calls.filter(([, o]) => o.cuerpo === 'bytes');
+    expect(sondeos).toHaveLength(17);
+    for (const [url, opciones] of sondeos) {
+      expect(url.protocol).toBe('https:');
+      expect(url.host).toBe('ejemplo.com');
+      expect(url.search).toBe('');
+      expect(opciones).toMatchObject({ seguirRedirecciones: 0, maxBytes: 4096, tiempoMs: 4000 });
+    }
+    expect(descargador).toHaveBeenCalledTimes(2 + 17);
+  });
+
+  it('no manda más de 4 peticiones a la vez', async () => {
+    const { descargador, maximo } = conSondeo();
+    await obtener(descargador, true);
+    expect(maximo()).toBeLessThanOrEqual(4);
+    expect(maximo()).toBeGreaterThan(1);
+  });
+
+  it('todo en orden: seis aciertos en la categoría de archivos expuestos', async () => {
+    const { descargador } = conSondeo();
+    const inf = await obtener(descargador, true);
+    const suyos = inf.hallazgos.filter((h) => h.categoria === 'exposicion');
+    expect(suyos).toHaveLength(6);
+    expect(suyos.every((h) => h.resultado === 'correcto')).toBe(true);
+    expect(inf.nota.categorias.find((c) => c.id === 'exposicion')?.puntos).toBe(100);
+  });
+
+  it('un .env expuesto baja la nota a F y el informe no contiene su contenido', async () => {
+    const { descargador } = conSondeo({
+      '/.env': bien(respuesta({ estado: 200, cabeceras: { 'content-type': ['text/plain'] }, cuerpo: SECRETO, estadoCuerpo: 'completo' })),
+    });
+    const inf = await obtener(descargador, true);
+    expect(inf.nota.letra).toBe('F');
+    expect(inf.nota.techo).toEqual({ id: 'exposicion.env', letra: 'F' });
+    expect(JSON.stringify(inf)).not.toContain('secreta');
+    expect(JSON.stringify(inf)).not.toContain('DB_PASSWORD');
+  });
+
+  it('si el sondeo falla (plazo, red, excepción) el análisis sigue y esos grupos quedan «no aplica»', async () => {
+    const { descargador } = conSondeo({
+      '/.env': mal('tiempo-agotado'),
+      '/.git/HEAD': () => {
+        throw new Error('boom');
+      },
+    });
+    const inf = await obtener(descargador, true);
+    expect(inf.hallazgos.find((h) => h.id === 'exposicion.env')?.resultado).toBe('no-aplica');
+    expect(inf.hallazgos.find((h) => h.id === 'exposicion.git')?.resultado).toBe('no-aplica');
+    expect(inf.hallazgos.find((h) => h.id === 'exposicion.ds')?.resultado).toBe('correcto');
+  });
+
+  it('si la web no es analizable, no hay informe aunque se pidiera el sondeo', async () => {
+    const descargador = vi.fn<Descargador>(async () => mal('dns'));
+    const r = await analizarCon(descargador, true);
+    expect(r.ok).toBe(false);
   });
 });

@@ -50,6 +50,11 @@ export interface OpcionesDescarga {
   maxBytes: number;
   /** Plazo total, redirecciones y lectura incluidas. */
   tiempoMs: number;
+  /**
+   * Qué cuerpo se lee: «html» (por defecto) solo páginas HTML con respuesta 2xx; «bytes» cualquier respuesta 200,
+   * pasada a texto byte a byte (latin1) para poder reconocer firmas binarias. Lo usa el sondeo de archivos expuestos.
+   */
+  cuerpo?: 'html' | 'bytes';
 }
 
 export type Descargador = (url: URL, opciones: OpcionesDescarga) => Promise<ResultadoCaptura>;
@@ -301,10 +306,16 @@ const OMITIDO: CuerpoLeido = {
   bytesLeidos: 0,
 };
 
-async function leerCuerpo(res: http.IncomingMessage, estado: number, cabeceras: Record<string, string[]>, maxBytes: number): Promise<CuerpoLeido> {
+async function leerCuerpo(
+  res: http.IncomingMessage,
+  estado: number,
+  cabeceras: Record<string, string[]>,
+  maxBytes: number,
+  modo: 'html' | 'bytes' = 'html',
+): Promise<CuerpoLeido> {
   const tipo = (cabeceras['content-type']?.[0] ?? '').toLowerCase();
   const esHtml = tipo.includes('text/html') || tipo.includes('application/xhtml+xml');
-  if (estado < 200 || estado > 299 || !esHtml) return OMITIDO;
+  if (modo === 'bytes' ? estado !== 200 : estado < 200 || estado > 299 || !esHtml) return OMITIDO;
 
   const decodificador = crearDecodificador(cabeceras['content-encoding']?.[0]);
   if (decodificador === 'desconocida') return OMITIDO;
@@ -340,7 +351,7 @@ async function leerCuerpo(res: http.IncomingMessage, estado: number, cabeceras: 
   }
 
   return {
-    cuerpo: decodificarHtml(Buffer.concat(trozos), cabeceras['content-type']?.[0]),
+    cuerpo: modo === 'bytes' ? Buffer.concat(trozos).toString('latin1') : decodificarHtml(Buffer.concat(trozos), cabeceras['content-type']?.[0]),
     estadoCuerpo: interrumpido ? 'interrumpido' : recortado ? 'recortado' : 'completo',
     bytesLeidos: bytes,
   };
@@ -433,7 +444,7 @@ export function crearDescargador(dependencias: DependenciasDescarga = {}): Desca
           continue;
         }
 
-        const cuerpo = await leerCuerpo(res, estado, cabeceras, opciones.maxBytes);
+        const cuerpo = await leerCuerpo(res, estado, cabeceras, opciones.maxBytes, opciones.cuerpo);
         res.destroy();
         return {
           ok: true,

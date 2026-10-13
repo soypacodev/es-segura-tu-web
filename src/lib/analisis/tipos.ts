@@ -11,7 +11,7 @@ export type Gravedad = 'critica' | 'alta' | 'media' | 'baja' | 'info';
 
 export type Resultado = 'correcto' | 'mejorable' | 'fallo' | 'no-aplica';
 
-export type Categoria = 'https' | 'cabeceras' | 'cookies' | 'tecnologias' | 'privacidad' | 'dns' | 'contenido' | 'rendimiento';
+export type Categoria = 'https' | 'cabeceras' | 'cookies' | 'tecnologias' | 'privacidad' | 'dns' | 'contenido' | 'rendimiento' | 'exposicion';
 
 export type DatoSimple = string | number | boolean | null;
 export type Datos = Record<string, DatoSimple | readonly string[]>;
@@ -115,6 +115,15 @@ export interface CapturaDns {
   caa: ConsultaDns<string>;
 }
 
+/** Qué se vio al pedir un archivo que no debería estar público (solo con permiso de quien analiza). */
+export interface Sondeo {
+  /** Identificador del hallazgo al que pertenece, por ejemplo «exposicion.env». */
+  grupo: string;
+  ruta: string;
+  /** «expuesto»: la respuesta tiene la firma del archivo. «sin-datos»: no se pudo saber (fallo, plazo, limitación de uso). */
+  estado: 'expuesto' | 'limpio' | 'sin-datos';
+}
+
 export interface CapturaSitio {
   host: string;
   /** Entrada por HTTPS, siguiendo redirecciones. */
@@ -123,4 +132,6 @@ export interface CapturaSitio {
   http: ResultadoCaptura;
   /** Ausente si no se pidió el DNS o la dirección no tiene dominio (una IP, por ejemplo). */
   dns?: CapturaDns;
+  /** Solo si se pidió el sondeo de archivos expuestos. */
+  sondeos?: Sondeo[];
 }

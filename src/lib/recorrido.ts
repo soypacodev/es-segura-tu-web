@@ -16,7 +16,7 @@ export const PARADAS: readonly { id: IdParada; ids: readonly string[] }[] = [
     id: 'canal',
     ids: ['https.disponible', 'https.final.seguro', 'https.tls.version', 'https.certificado.valido', 'https.certificado.caducidad'],
   },
-  { id: 'servidor', ids: ['https.hsts', 'tecnologias.', 'rendimiento.'] },
+  { id: 'servidor', ids: ['https.hsts', 'tecnologias.', 'rendimiento.', 'exposicion.'] },
   { id: 'navegador', ids: ['cabeceras.', 'contenido.'] },
   { id: 'cookies', ids: ['cookies.', 'privacidad.'] },
 ];
