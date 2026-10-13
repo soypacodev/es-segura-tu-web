@@ -287,6 +287,34 @@ p {
   filter: none;
 }
 
+.permiso {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-top: 16px;
+}
+
+.permiso__casilla {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  margin: 1px 0 0;
+  accent-color: var(--accion);
+  cursor: pointer;
+}
+
+.permiso__texto {
+  display: grid;
+  gap: 4px;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  cursor: pointer;
+}
+
+.permiso__texto span {
+  color: var(--tinta-suave);
+}
+
 .formulario__nota {
   margin-top: 12px;
   font-size: 0.95rem;

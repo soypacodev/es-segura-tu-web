@@ -46,7 +46,7 @@ export function Analizador() {
   // Si se sale de la página a mitad de un análisis, se corta la conexión en vez de dejarla abierta.
   useEffect(() => () => cancelar.current?.abort(), []);
 
-  const analizar = useCallback(async (direccion: string) => {
+  const analizar = useCallback(async (direccion: string, permiso: boolean) => {
     cancelar.current?.abort();
     const control = new AbortController();
     cancelar.current = control;
@@ -70,7 +70,7 @@ export function Analizador() {
       const respuesta = await fetch('/api/analizar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ direccion }),
+        body: JSON.stringify(permiso ? { direccion, permiso } : { direccion }),
         signal: control.signal,
         cache: 'no-store',
       });

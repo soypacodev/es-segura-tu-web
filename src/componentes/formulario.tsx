@@ -5,12 +5,14 @@ import { useId, useState } from 'react';
 interface Props {
   ocupado: boolean;
   error: { titulo: string; texto?: string } | null;
-  alEnviar: (direccion: string) => void;
+  alEnviar: (direccion: string, permiso: boolean) => void;
 }
 
 export function Formulario({ ocupado, error, alEnviar }: Props) {
   const [direccion, setDireccion] = useState('');
+  const [permiso, setPermiso] = useState(false);
   const id = useId();
+  const idPermiso = `${id}-permiso`;
   const idError = `${id}-error`;
 
   return (
@@ -19,7 +21,7 @@ export function Formulario({ ocupado, error, alEnviar }: Props) {
       noValidate
       onSubmit={(e) => {
         e.preventDefault();
-        if (!ocupado) alEnviar(direccion);
+        if (!ocupado) alEnviar(direccion, permiso);
       }}
     >
       <label className="formulario__etiqueta" htmlFor={id}>
@@ -45,6 +47,16 @@ export function Formulario({ ocupado, error, alEnviar }: Props) {
         <button className="boton" type="submit" disabled={ocupado}>
           {ocupado ? 'Revisando…' : 'Revisar mi web'}
         </button>
+      </div>
+      <div className="permiso">
+        <input id={idPermiso} className="permiso__casilla" type="checkbox" checked={permiso} onChange={(e) => setPermiso(e.target.checked)} />
+        <label htmlFor={idPermiso} className="permiso__texto">
+          <strong>Soy responsable de esta web o tengo permiso para revisarla a fondo</strong>
+          <span>
+            Además, comprobaremos si hay archivos privados a la vista (claves, copias de seguridad, historial del código). Son unas 17 peticiones a tu
+            web y no guardamos ni mostramos lo que contienen.
+          </span>
+        </label>
       </div>
       {error ? (
         <p className="formulario__error" id={idError} role="alert">
