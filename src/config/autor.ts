@@ -16,8 +16,8 @@ export const AUTOR = {
     'Hago webs y aplicaciones a medida para pequeños negocios, y me encargo de que sean seguras, rápidas y fáciles de mantener. Esta herramienta es gratuita; si quieres que alguien arregle lo que aparece en tu informe, escríbeme.',
   correo: 'soypacodev@gmail.com',
   github: 'https://github.com/soypacodev',
-  /** Portfolio y otros proyectos. Vacío hasta que haya direcciones reales. */
-  enlaces: [] as readonly EnlaceAutor[],
+  /** Portfolio y otros proyectos (faltan el portfolio y Cachivache hasta tener su dirección). */
+  enlaces: [{ nombre: 'Ovillo & Co.', descripcion: 'Tienda online de artículos de ganchillo', url: 'https://ovillo-co.vercel.app' }] as readonly EnlaceAutor[],
 } as const;
 
 /** Las iniciales para el avatar, a partir del nombre. */

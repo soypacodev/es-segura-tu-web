@@ -644,6 +644,11 @@ p {
   font-weight: 800;
 }
 
+/* El titular recibe el foco por código (para lectores de pantalla), no es un control: sin anillo. */
+.panel-nota__titulo:focus {
+  outline: none;
+}
+
 .panel-nota__host {
   color: var(--panel-suave);
   margin-top: 4px;
@@ -1499,8 +1504,8 @@ html:has(.barra-simulador) {
 
 .compartir {
   display: grid;
+  justify-items: start;
   gap: 8px;
-  margin-top: 12px;
   max-width: 560px;
 }
 
@@ -1510,6 +1515,7 @@ html:has(.barra-simulador) {
 }
 
 .compartir__fila {
+  justify-self: stretch;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
