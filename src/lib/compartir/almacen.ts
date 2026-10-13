@@ -13,6 +13,8 @@ export interface Almacen {
   guardar(id: string, informe: Informe, creado: Date, caduca: Date): Promise<void>;
   /** null si no existe o ya caducó. */
   leer(id: string, ahora: Date): Promise<InformeGuardado | null>;
+  /** Una consulta mínima a la base de datos (para que Supabase gratuito no pause el proyecto por inactividad). */
+  comprobar(): Promise<void>;
 }
 
 const FORMATO_ID = /^[A-Za-z0-9_-]{22}$/;
@@ -31,6 +33,9 @@ export function crearAlmacenMemoria(): Almacen {
   return {
     async guardar(id, informe, creado, caduca) {
       datos.set(id, { informe, creado: creado.toISOString(), caduca: caduca.toISOString() });
+    },
+    async comprobar() {
+      // En memoria no hay nada que mantener despierto.
     },
     async leer(id, ahora) {
       const guardado = datos.get(id);
@@ -67,6 +72,10 @@ export function crearAlmacenSupabase(url: string, clave: string, peticion: Petic
         cache: 'no-store',
       });
       if (!respuesta.ok) throw new Error(`almacen-guardar-${respuesta.status}`);
+    },
+    async comprobar() {
+      const respuesta = await peticion(`${base}?select=id&limit=1`, { headers: cabeceras, signal: AbortSignal.timeout(TIEMPO_MAX_MS), cache: 'no-store' });
+      if (!respuesta.ok) throw new Error(`almacen-comprobar-${respuesta.status}`);
     },
     async leer(id, ahora) {
       if (!esIdValido(id)) return null;

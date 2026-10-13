@@ -26,6 +26,8 @@ Una herramienta que hace peticiones a direcciones elegidas por desconocidos es, 
 - La tabla de Supabase tiene RLS activado y ninguna política: solo el servidor, con la clave de servicio, la toca. La clave nunca llega al navegador.
 - Mismas defensas que el análisis: origen, JSON, tope de cuerpo (128 KB), esquema estricto y límite de uso (10 enlaces por hora y visitante).
 
+- `/api/mantener-activo` (cron diario) solo actúa con `Authorization: Bearer CRON_SECRET`, comparado en tiempo constante; hace una consulta de una fila y no devuelve datos.
+
 **Contra el abuso del servicio**
 
 - Comprobación de `Origin` contra `Host`, solo `application/json`, cuerpo de 4 KB como máximo y esquema Zod estricto.

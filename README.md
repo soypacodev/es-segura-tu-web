@@ -51,8 +51,9 @@ npm run analizar -- ejemplo.com --json
 | `SUPABASE_SERVICE_ROLE_KEY` | Clave de servicio: solo en el servidor, nunca en el navegador                               |
 | `INFORME_SECRETO`           | Cadena aleatoria de 32 caracteres o más con la que el servidor firma los informes           |
 | `INFORME_DIAS`              | Días que se conserva un informe compartido (1–365; por defecto 30)                          |
+| `CRON_SECRET`               | Cadena aleatoria (16 caracteres o más) para el cron diario de `vercel.json`                 |
 
-La tabla se crea con [`supabase/informes.sql`](supabase/informes.sql). En desarrollo (`npm run dev`) sin Supabase se guarda en memoria, para probarlo.
+La tabla se crea con [`supabase/informes.sql`](supabase/informes.sql). Un cron diario de Vercel (`/api/mantener-activo`) hace una consulta mínima para que Supabase gratuito no pause el proyecto por inactividad. En desarrollo (`npm run dev`) sin Supabase se guarda en memoria, para probarlo.
 
 ## Scripts
 

@@ -169,6 +169,16 @@ describe('almacén Supabase', () => {
     expect(await crearAlmacenSupabase('https://abc.supabase.co', clave, peticion).leer('x&select=*', AHORA)).toBeNull();
     expect(peticion).not.toHaveBeenCalled();
   });
+  it('comprobar hace una consulta mínima (un id, una fila) y falla si Supabase falla', async () => {
+    const bien = vi.fn(async () => Response.json([]));
+    await crearAlmacenSupabase('https://abc.supabase.co', clave, bien).comprobar();
+    const url = new URL((bien.mock.calls[0] as unknown as [string])[0]);
+    expect(url.pathname).toBe('/rest/v1/informes');
+    expect(url.searchParams.get('select')).toBe('id');
+    expect(url.searchParams.get('limit')).toBe('1');
+    const mal = vi.fn(async () => new Response('', { status: 503 }));
+    await expect(crearAlmacenSupabase('https://abc.supabase.co', clave, mal).comprobar()).rejects.toThrow(/almacen-comprobar-503/);
+  });
   it('si Supabase falla al leer, lanza error (no se confunde con «no existe»)', async () => {
     const peticion = vi.fn(async () => new Response('', { status: 500 }));
     await expect(crearAlmacenSupabase('https://abc.supabase.co', clave, peticion).leer(crearId(), AHORA)).rejects.toThrow(/almacen-leer-500/);
@@ -212,7 +222,7 @@ describe('guardarInformeCompartido', () => {
   });
   it('si el almacén falla, lo dice sin lanzar', async () => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    const d = { ...dep(), almacen: { guardar: async () => Promise.reject(new Error('caído')), leer: async () => null } };
+    const d = { ...dep(), almacen: { guardar: async () => Promise.reject(new Error('caído')), leer: async () => null, comprobar: async () => undefined } };
     const i = informe();
     expect(await guardarInformeCompartido({ informe: i, firma: firmarInforme(i, SECRETO, AHORA.getTime()) }, d)).toEqual({ ok: false, motivo: 'almacen' });
     error.mockRestore();
