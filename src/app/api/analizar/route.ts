@@ -4,6 +4,9 @@ import { analizarSitio } from '@/lib/analisis/analizar';
 import { descargadorSeguro } from '@/lib/analisis/descarga';
 import { resolvedorReal } from '@/lib/analisis/dns';
 import { normalizarObjetivo } from '@/lib/analisis/objetivo';
+import { firmarInforme } from '@/lib/compartir/firma';
+import { obtenerCompartir } from '@/lib/compartir/instancia';
+import { esCompartible } from '@/lib/compartir/servicio';
 import { crearLimitador } from '@/lib/limite';
 import type { ErrorPeticion, Evento } from '@/lib/protocolo';
 import { identificarVisitante, leerCuerpoLimitado, origenPermitido } from '@/lib/seguridad/peticion';
@@ -57,9 +60,13 @@ export async function POST(peticion: Request) {
 
   const admision = limitador.admitir(identificarVisitante(peticion.headers));
   if (!admision.ok) {
-    return rechazo(admision.motivo === 'servidor-ocupado' ? 503 : 429, { codigo: admision.motivo, reintentarEnSeg: admision.reintentarEnSeg }, {
-      'Retry-After': String(admision.reintentarEnSeg),
-    });
+    return rechazo(
+      admision.motivo === 'servidor-ocupado' ? 503 : 429,
+      { codigo: admision.motivo, reintentarEnSeg: admision.reintentarEnSeg },
+      {
+        'Retry-After': String(admision.reintentarEnSeg),
+      },
+    );
   }
 
   const codificador = new TextEncoder();
@@ -80,7 +87,16 @@ export async function POST(peticion: Request) {
           sondearArchivos: datos.permiso === true,
           alProgreso: (e) => enviar({ t: 'captura', via: e.via, ok: e.ok }),
         });
-        enviar(resultado.ok ? { t: 'informe', informe: resultado.informe } : { t: 'error', error: resultado.error });
+        if (!resultado.ok) enviar({ t: 'error', error: resultado.error });
+        else {
+          // La firma habilita «Crear enlace para compartir»: solo la lleva un informe que este servidor ha producido y que se puede publicar.
+          const compartir = obtenerCompartir();
+          const oferta =
+            compartir && esCompartible(resultado.informe)
+              ? { compartir: { firma: firmarInforme(resultado.informe, compartir.config.secreto, Date.now()), dias: compartir.config.dias } }
+              : {};
+          enviar({ t: 'informe', informe: resultado.informe, ...oferta });
+        }
       } catch (fallo) {
         console.error('[analizar]', fallo instanceof Error ? fallo.message : 'fallo desconocido');
         enviar({ t: 'error', error: { codigo: 'sin-respuesta', detalle: 'fallo-interno' } });

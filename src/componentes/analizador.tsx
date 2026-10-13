@@ -4,11 +4,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Informe } from '@/lib/analisis/analizar';
 import { textoDeEspera } from '@/lib/frases';
 import { crearLector } from '@/lib/leer-flujo';
-import type { Evento } from '@/lib/protocolo';
+import type { Evento, OfertaCompartir } from '@/lib/protocolo';
 import { simular } from '@/lib/simulacion';
 import { ERRORES_ANALISIS, ERRORES_OBJETIVO, ERRORES_PETICION } from '@/lib/textos/es';
 import type { MotivoObjetivo } from '@/lib/analisis/objetivo';
 import { EscalaNotas } from './escala-notas';
+import { BotonCompartir } from './compartir';
 import { Formulario } from './formulario';
 import { InformeVisual } from './informe';
 import { Progreso, type PasosAnalisis } from './progreso';
@@ -16,7 +17,7 @@ import { Progreso, type PasosAnalisis } from './progreso';
 type Estado =
   | { fase: 'espera' }
   | { fase: 'analizando'; host: string | null; pasos: PasosAnalisis }
-  | { fase: 'listo'; informe: Informe }
+  | { fase: 'listo'; informe: Informe; compartir?: OfertaCompartir }
   | { fase: 'error'; titulo: string; texto?: string };
 
 const PASOS_INICIALES: PasosAnalisis = { https: 'curso', http: 'curso', evaluar: 'espera' };
@@ -29,7 +30,9 @@ function errorDeRespuesta(cuerpo: unknown): { titulo: string; texto?: string } {
   const error = (cuerpo as { error?: { codigo?: string; motivo?: string; reintentarEnSeg?: number } } | null)?.error;
   if (error?.codigo === 'objetivo-invalido') {
     const motivo = error.motivo;
-    return { titulo: motivo !== undefined && Object.hasOwn(ERRORES_OBJETIVO, motivo) ? ERRORES_OBJETIVO[motivo as MotivoObjetivo] : ERRORES_OBJETIVO['host-invalido'] };
+    return {
+      titulo: motivo !== undefined && Object.hasOwn(ERRORES_OBJETIVO, motivo) ? ERRORES_OBJETIVO[motivo as MotivoObjetivo] : ERRORES_OBJETIVO['host-invalido'],
+    };
   }
   if (error?.codigo !== undefined && Object.hasOwn(ERRORES_PETICION, error.codigo)) {
     const espera = typeof error.reintentarEnSeg === 'number' ? { texto: `Puedes volver a intentarlo ${textoDeEspera(error.reintentarEnSeg)}.` } : {};
@@ -103,7 +106,7 @@ export function Analizador() {
       await esperar(Math.max(0, DURACION_MINIMA_MS - (Date.now() - inicio)));
       if (control.signal.aborted) return;
 
-      if (final.t === 'informe') setEstado({ fase: 'listo', informe: final.informe });
+      if (final.t === 'informe') setEstado({ fase: 'listo', informe: final.informe, ...(final.compartir ? { compartir: final.compartir } : {}) });
       else {
         const texto = ERRORES_ANALISIS[final.error.codigo];
         setEstado({ fase: 'error', ...(texto ?? { titulo: 'No hemos podido revisar esa web', texto: 'Inténtalo de nuevo más tarde.' }) });
@@ -132,11 +135,7 @@ export function Analizador() {
         <div>
           <h1 className="portada__titulo">¿Es segura tu web?</h1>
           <p className="portada__texto">Pega la dirección y te ponemos nota de la A a la F, con lo que significa y cómo arreglarlo.</p>
-          <Formulario
-            ocupado={analizando}
-            error={estado.fase === 'error' ? { titulo: estado.titulo, texto: estado.texto } : null}
-            alEnviar={analizar}
-          />
+          <Formulario ocupado={analizando} error={estado.fase === 'error' ? { titulo: estado.titulo, texto: estado.texto } : null} alEnviar={analizar} />
           {estado.fase === 'analizando' && <Progreso pasos={estado.pasos} />}
         </div>
         <EscalaNotas actual={informe?.nota.letra ?? null} simulada={simulada} escaneando={analizando} />
@@ -154,6 +153,7 @@ export function Analizador() {
           alAlternar={alternar}
           alMarcarVarios={(ids) => setArreglados(new Set(ids))}
           alLimpiar={() => setArreglados(new Set())}
+          acciones={estado.fase === 'listo' && estado.compartir ? <BotonCompartir informe={estado.informe} oferta={estado.compartir} /> : null}
         />
       )}
     </div>

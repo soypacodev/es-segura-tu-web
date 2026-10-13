@@ -14,6 +14,8 @@ const CABECERAS_SEGURIDAD = [
 const config: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
+  // Next 16.4 genera un AGENTS.md al arrancar en desarrollo; el repositorio no lo necesita.
+  agentRules: false,
   async headers() {
     return [{ source: '/:path*', headers: CABECERAS_SEGURIDAD }];
   },

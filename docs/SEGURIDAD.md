@@ -17,6 +17,15 @@ Una herramienta que hace peticiones a direcciones elegidas por desconocidos es, 
 - Pasa por el mismo descargador seguro (misma protección SSRF) y por el mismo límite de uso por visitante.
 - Lo leído se descarta tras reconocer la firma: no se guarda, no se registra y no sale en el informe.
 
+**Enlace para compartir**
+
+- Solo se puede guardar un informe que **este servidor produjo**: sale firmado (HMAC-SHA256 con `INFORME_SECRETO`, sobre el informe en JSON canónico) y la firma vale una hora. Sin ella, nadie puede publicar un informe inventado con nuestra marca ni usar el servicio como almacén gratuito.
+- El informe **no contiene datos sensibles** por construcción: ni el HTML, ni cabeceras en bruto, ni cookies, ni contenido de archivos; solo identificadores de hallazgos y datos sueltos (nombres de cabeceras, versiones…).
+- **Nunca se comparte un informe con archivos expuestos** (`.env`, `.git`…): aunque no incluye su contenido, diría dónde están. El servidor ni siquiera ofrece la firma en ese caso, y vuelve a comprobarlo al guardar.
+- El identificador son 16 bytes aleatorios (22 caracteres): no se puede adivinar ni recorrer. La página lleva `noindex`, `Referrer-Policy: no-referrer`, está excluida en `robots.txt` y caduca (30 días por defecto; lo caducado no se devuelve, y `supabase/informes.sql` incluye el borrado diario).
+- La tabla de Supabase tiene RLS activado y ninguna política: solo el servidor, con la clave de servicio, la toca. La clave nunca llega al navegador.
+- Mismas defensas que el análisis: origen, JSON, tope de cuerpo (128 KB), esquema estricto y límite de uso (10 enlaces por hora y visitante).
+
 **Contra el abuso del servicio**
 
 - Comprobación de `Origin` contra `Host`, solo `application/json`, cuerpo de 4 KB como máximo y esquema Zod estricto.
@@ -35,6 +44,8 @@ Una herramienta que hace peticiones a direcciones elegidas por desconocidos es, 
 - **IP del visitante**: se confía en `x-real-ip` solo cuando se ejecuta en Vercel, que es quien la fija. Fuera de ahí se usa una clave común conservadora.
 - **Nombres de `/etc/hosts`**: el resolvedor DNS no los lee; los de loopback se rechazan por nombre, y cualquier otro nombre local simplemente no se resuelve.
 - **Descompresión Brotli**: la ventana de descompresión puede ocupar memoria; está acotada por el tope de tamaño y el límite de análisis simultáneos.
+
+- **Enlace compartido = permiso de lectura**: quien tenga la dirección puede ver el informe hasta que caduque. Se avisa a la persona antes de crearlo. No hay forma de borrarlo antes de tiempo (no hay cuentas); por eso se guarda poco tiempo.
 
 ## Notificar un problema
 

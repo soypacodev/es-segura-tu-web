@@ -634,6 +634,18 @@ export const ERRORES_PETICION: Record<string, string> = {
   'servidor-ocupado': 'Ahora mismo hay mucha gente analizando webs. Inténtalo de nuevo en unos segundos.',
 };
 
+/** Lo que se le dice a la persona cuando no se puede crear el enlace para compartir. */
+export const ERRORES_COMPARTIR: Record<string, string> = {
+  origen: 'La petición no viene de esta página.',
+  formato: 'No hemos entendido la petición. Recarga la página e inténtalo de nuevo.',
+  'demasiado-grande': 'El informe es demasiado grande para compartirlo.',
+  'no-disponible': 'Compartir informes no está activado en este servidor.',
+  firma: 'Este informe ha caducado para compartirlo. Vuelve a revisar la web y pulsa de nuevo.',
+  'no-compartible': 'Este informe no se puede compartir porque menciona archivos privados de tu web.',
+  almacen: 'No hemos podido guardar el informe. Inténtalo de nuevo en unos minutos.',
+  'demasiados-enlaces': 'Has creado muchos enlaces seguidos. Espera un poco antes de crear otro.',
+};
+
 /** Paradas del «Recorrido de la conexión». */
 export const PARADAS_TEXTO: Record<IdParada, { nombre: string; detalle: string }> = {
   direccion: { nombre: 'Alguien escribe tu dirección', detalle: 'Entra con http:// o sin nada delante.' },

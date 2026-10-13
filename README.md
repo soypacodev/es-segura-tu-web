@@ -38,6 +38,20 @@ npm run analizar -- ejemplo.com
 npm run analizar -- ejemplo.com --json
 ```
 
+## Informe en PDF y enlace para compartir
+
+- **PDF**: el botón «Descargar informe en PDF» abre el diálogo de impresión con una vista pensada para A4: sin interfaz, con todos los detalles desplegados y con el pie de autor. Se elige «Guardar como PDF».
+- **Enlace para compartir** (opcional): guarda el informe y da una dirección que se puede reenviar. Solo se activa si se configuran las variables de abajo; sin ellas, la web funciona igual y el botón no aparece.
+
+| Variable                    | Para qué                                                                                   |
+| --------------------------- | ------------------------------------------------------------------------------------------ |
+| `SUPABASE_URL`              | Dirección del proyecto (`https://….supabase.co`)                                            |
+| `SUPABASE_SERVICE_ROLE_KEY` | Clave de servicio: solo en el servidor, nunca en el navegador                               |
+| `INFORME_SECRETO`           | Cadena aleatoria de 32 caracteres o más con la que el servidor firma los informes           |
+| `INFORME_DIAS`              | Días que se conserva un informe compartido (1–365; por defecto 30)                          |
+
+La tabla se crea con [`supabase/informes.sql`](supabase/informes.sql). En desarrollo (`npm run dev`) sin Supabase se guarda en memoria, para probarlo.
+
 ## Scripts
 
 | Comando                       | Qué hace                             |
