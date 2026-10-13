@@ -39,6 +39,21 @@ export function crearLimitador(config: ConfigLimite = LIMITE_POR_DEFECTO, ahora:
     }
   }
 
+  /**
+   * Con la tabla llena de visitantes recientes, un recién llegado no se rechaza (inundar la tabla con
+   * direcciones inventadas dejaría fuera a todos los demás): se olvida al visitante más antiguo que no
+   * tenga un análisis en marcha. Si todos tienen uno en marcha, se rechaza. El tope de análisis
+   * simultáneos sigue protegiendo al servidor pase lo que pase.
+   */
+  function olvidarAlMasAntiguoSinAnalisis(): boolean {
+    for (const visitante of historial.keys()) {
+      if (enCurso.has(visitante)) continue;
+      historial.delete(visitante);
+      return true;
+    }
+    return false;
+  }
+
   return {
     admitir(visitante: string): Admision {
       const t = ahora();
@@ -54,7 +69,8 @@ export function crearLimitador(config: ConfigLimite = LIMITE_POR_DEFECTO, ahora:
       if (propios >= config.maxSimultaneosPorVisitante) {
         return { ok: false, motivo: 'demasiados-analisis', reintentarEnSeg: 10 };
       }
-      if (total >= config.maxSimultaneos || (!historial.has(visitante) && historial.size >= config.maxVisitantes)) {
+      if (total >= config.maxSimultaneos) return { ok: false, motivo: 'servidor-ocupado', reintentarEnSeg: 15 };
+      if (!historial.has(visitante) && historial.size >= config.maxVisitantes && !olvidarAlMasAntiguoSinAnalisis()) {
         return { ok: false, motivo: 'servidor-ocupado', reintentarEnSeg: 15 };
       }
 

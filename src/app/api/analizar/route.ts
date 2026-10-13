@@ -6,14 +6,15 @@ import { resolvedorReal } from '@/lib/analisis/dns';
 import { normalizarObjetivo } from '@/lib/analisis/objetivo';
 import { crearLimitador } from '@/lib/limite';
 import type { ErrorPeticion, Evento } from '@/lib/protocolo';
-import { identificarVisitante, origenPermitido } from '@/lib/seguridad/peticion';
+import { identificarVisitante, leerCuerpoLimitado, origenPermitido } from '@/lib/seguridad/peticion';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
 
-const MAX_BYTES_PETICION = 2048;
-const Peticion = z.object({ direccion: z.string().max(300) }).strict();
+const MAX_BYTES_PETICION = 4096;
+// El largo de la dirección lo valida normalizarObjetivo (que da el motivo «demasiado-largo»); aquí el tope es el del cuerpo.
+const Peticion = z.object({ direccion: z.string() }).strict();
 
 const limitador = crearLimitador();
 
@@ -32,13 +33,13 @@ export async function POST(peticion: Request) {
   const largo = Number(peticion.headers.get('content-length'));
   if (Number.isFinite(largo) && largo > MAX_BYTES_PETICION) return rechazo(413, { codigo: 'demasiado-grande' });
 
-  let texto: string;
+  let texto: string | null;
   try {
-    texto = await peticion.text();
+    texto = await leerCuerpoLimitado(peticion.body, MAX_BYTES_PETICION);
   } catch {
     return rechazo(400, { codigo: 'formato' });
   }
-  if (texto.length > MAX_BYTES_PETICION) return rechazo(413, { codigo: 'demasiado-grande' });
+  if (texto === null) return rechazo(413, { codigo: 'demasiado-grande' });
 
   let datos: z.infer<typeof Peticion>;
   try {

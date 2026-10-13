@@ -62,12 +62,31 @@ describe('limitador', () => {
     expect(limitador.admitir('d')).toMatchObject({ ok: false, motivo: 'servidor-ocupado' });
   });
 
-  it('acota la memoria: con demasiados visitantes nuevos rechaza, y tras la ventana limpia', () => {
-    const { limitador, avanzar } = montar({ ...CONFIG, maxSimultaneos: 99 });
+  it('acota la memoria sin dejar fuera a los recién llegados: olvida al más antiguo que no tenga análisis en marcha', () => {
+    const { limitador } = montar({ ...CONFIG, maxSimultaneos: 99 });
     for (const v of ['a', 'b', 'c', 'd']) (limitador.admitir(v) as { liberar: () => void }).liberar();
+    expect(limitador.admitir('e').ok).toBe(true); // «a» se olvida
+    expect(limitador.admitir('a').ok).toBe(true); // y «a», al volver, empieza de cero
+  });
+
+  it('si todos los visitantes recordados tienen un análisis en marcha, rechaza al nuevo', () => {
+    const { limitador } = montar({ ...CONFIG, maxSimultaneos: 99 });
+    for (const v of ['a', 'b', 'c', 'd']) limitador.admitir(v);
     expect(limitador.admitir('e')).toMatchObject({ ok: false, motivo: 'servidor-ocupado' });
-    avanzar(1001);
-    expect(limitador.admitir('e').ok).toBe(true);
+  });
+
+  it('inundar con direcciones inventadas no impide que entre un visitante normal ni supera el tope de simultáneos', () => {
+    const { limitador } = montar({ ...CONFIG, maxSimultaneos: 3, maxVisitantes: 4 });
+    for (let i = 0; i < 50; i++) (limitador.admitir(`falso-${i}`) as { liberar?: () => void }).liberar?.();
+    expect(limitador.admitir('real').ok).toBe(true);
+  });
+
+  it('un visitante olvidado vuelve a tener su cupo completo (límite aceptado: hace falta controlar miles de direcciones para lograrlo)', () => {
+    const { limitador } = montar({ ...CONFIG, maxSimultaneos: 99 });
+    for (let i = 0; i < 3; i++) (limitador.admitir('a') as { liberar: () => void }).liberar();
+    expect(limitador.admitir('a').ok).toBe(false);
+    for (const v of ['b', 'c', 'd', 'e']) (limitador.admitir(v) as { liberar: () => void }).liberar();
+    expect(limitador.admitir('a').ok).toBe(true);
   });
 
   it('cada visitante lleva su propia cuenta', () => {
