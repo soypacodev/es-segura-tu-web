@@ -13,6 +13,11 @@ create table if not exists public.informes (
 
 alter table public.informes enable row level security;
 
+-- Permisos explícitos: valen tanto si el proyecto expone las tablas nuevas automáticamente como si no.
+-- La clave pública (anon) y los usuarios con sesión (authenticated) no tocan esta tabla; el servidor sí.
+revoke all on public.informes from anon, authenticated;
+grant select, insert, delete on public.informes to service_role;
+
 -- La lectura ya ignora lo caducado; este índice acelera el borrado de lo viejo.
 create index if not exists informes_caduca_idx on public.informes (caduca);
 
