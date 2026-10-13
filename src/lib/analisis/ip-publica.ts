@@ -14,6 +14,7 @@ const RANGOS_NO_PUBLICOS_V4: readonly Rango4[] = [
   ['10.0.0.0', 8], // privada
   ['100.64.0.0', 10], // CGNAT
   ['127.0.0.0', 8], // loopback
+  ['168.63.129.16', 32], // WireServer de Azure: servicio interno de las máquinas virtuales, aunque la dirección sea «pública»
   ['169.254.0.0', 16], // enlace local: incluye el servicio de metadatos de la nube
   ['172.16.0.0', 12], // privada
   ['192.0.0.0', 24], // protocolos IETF

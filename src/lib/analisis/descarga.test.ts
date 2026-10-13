@@ -10,6 +10,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   USER_AGENT,
   crearDescargador,
+  crearResolutorDns,
+  decodificarHtml,
   descargadorSeguro,
   type DependenciasDescarga,
   type OpcionesDescarga,
@@ -116,6 +118,12 @@ function manejar(req: http.IncomingMessage, res: http.ServerResponse) {
     case '/zstd':
       res.writeHead(200, { ...html, 'content-encoding': 'zstd' });
       return res.end('datos');
+    case '/latin1':
+      res.writeHead(200, { 'content-type': 'text/html; charset=iso-8859-1' });
+      return res.end(Buffer.from('<p>Pol\xedtica de privacidad</p>', 'latin1'));
+    case '/latin1-meta':
+      res.writeHead(200, { 'content-type': 'text/html' });
+      return res.end(Buffer.from('<html><head><meta charset="windows-1252"></head><p>Pol\xedtica</p>', 'latin1'));
     case '/colgado':
       return; // no responde nunca
     case '/lento':
@@ -171,6 +179,11 @@ describe('descarga · respuestas normales', () => {
     expect(r.redirecciones).toEqual([]);
     expect(r.certificados).toEqual([]);
     expect(r.urlFinal).toBe(dir('/html').href);
+  });
+
+  it('lee la página con la codificación que declara, no siempre como UTF-8 (cabecera o meta)', async () => {
+    expect((await exito('/latin1')).cuerpo).toBe('<p>Política de privacidad</p>');
+    expect((await exito('/latin1-meta')).cuerpo).toContain('<p>Política</p>');
   });
 
   it('se identifica y no envía cookies, credenciales ni referencia', async () => {
@@ -426,5 +439,73 @@ describe.skipIf(!credenciales)('descarga · TLS real con certificado autofirmado
     expect(tls.alternativos).toContain('sitio.test');
     expect(new Date(tls.validoHasta as string).getTime()).toBeGreaterThan(Date.now());
     expect(new Date(tls.validoDesde as string).getTime()).toBeLessThanOrEqual(Date.now() + 60_000);
+  });
+});
+
+describe('decodificarHtml', () => {
+  const latin1 = (t: string) => Buffer.from(t, 'latin1');
+  it('sin declaración, UTF-8', () => expect(decodificarHtml(Buffer.from('<p>Política ñ</p>'), 'text/html')).toBe('<p>Política ñ</p>'));
+  it('la cabecera manda sobre el meta', () => {
+    expect(decodificarHtml(latin1('<meta charset="utf-8"><p>Pol\xedtica'), 'text/html; charset=ISO-8859-1')).toContain('Política');
+  });
+  it('el meta, en comillas simples, dobles o sin ellas, y con http-equiv', () => {
+    for (const meta of ['<meta charset=iso-8859-1>', "<meta charset='iso-8859-1'>", '<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">']) {
+      expect(decodificarHtml(latin1(`<head>${meta}</head>Pol\xedtica`), undefined)).toContain('Política');
+    }
+  });
+  it('un meta pasados los primeros 1024 bytes no se tiene en cuenta (como en un navegador)', () => {
+    const t = decodificarHtml(latin1(`${'x'.repeat(1100)}<meta charset="iso-8859-1">Pol\xedtica`), undefined);
+    expect(t).toContain('\uFFFD');
+  });
+  it('una codificación desconocida se lee como UTF-8, sin romper', () => {
+    expect(decodificarHtml(Buffer.from('<p>ñ</p>'), 'text/html; charset=inventada-9')).toBe('<p>ñ</p>');
+  });
+  it('un charset enorme o con basura no tarda ni rompe', () => {
+    const t = performance.now();
+    decodificarHtml(Buffer.from('<meta ' + 'charset '.repeat(100_000)), undefined);
+    decodificarHtml(Buffer.from('x'), `text/html; charset=${'a'.repeat(100_000)}`);
+    expect(performance.now() - t).toBeLessThan(500);
+  });
+});
+
+describe('crearResolutorDns', () => {
+  const ok = (v: string[]) => () => Promise.resolve(v);
+  const falla = (code: string) => () => Promise.reject(Object.assign(new Error(code), { code }));
+  const resolver = (r4: () => Promise<string[]>, r6: () => Promise<string[]>) => crearResolutorDns({ resolve4: r4, resolve6: r6 });
+
+  it('junta las direcciones IPv4 e IPv6', async () => {
+    expect(await resolver(ok(['192.0.2.1']), ok(['2001:db8::1']))('ejemplo.com')).toEqual([
+      { address: '192.0.2.1', family: 4 },
+      { address: '2001:db8::1', family: 6 },
+    ]);
+  });
+  it('con solo una de las dos familias, basta', async () => {
+    expect(await resolver(ok(['192.0.2.1']), falla('ENODATA'))('a.com')).toEqual([{ address: '192.0.2.1', family: 4 }]);
+    expect(await resolver(falla('ENOTFOUND'), ok(['2001:db8::1']))('a.com')).toEqual([{ address: '2001:db8::1', family: 6 }]);
+  });
+  it.each(['ENODATA', 'ENOTFOUND'])('si las dos dicen «%s», el nombre no existe (ENOTFOUND)', async (code) => {
+    await expect(resolver(falla(code), falla(code))('a.com')).rejects.toMatchObject({ code: 'ENOTFOUND' });
+  });
+  it.each(['ETIMEOUT', 'ESERVFAIL', 'ECONNREFUSED'])('si el DNS no responde (%s), no se confunde con «no existe»', async (code) => {
+    await expect(resolver(falla(code), falla('ENODATA'))('a.com')).rejects.toMatchObject({ code: 'ERR_DNS_SIN_RESPUESTA' });
+    await expect(resolver(falla('ENODATA'), falla(code))('a.com')).rejects.toMatchObject({ code: 'ERR_DNS_SIN_RESPUESTA' });
+  });
+  it('si el DNS no responde pero la otra familia sí da direcciones, se usan', async () => {
+    expect(await resolver(falla('ETIMEOUT'), ok(['2001:db8::1']))('a.com')).toEqual([{ address: '2001:db8::1', family: 6 }]);
+  });
+  it('un DNS que no responde acaba como «tiempo-agotado» (ambiguo, sin nota), no como «no existe»', async () => {
+    const descargador = crearDescargador({
+      politica: { ipPermitida: () => true, puertosPermitidos: [80] },
+      resolutor: resolver(falla('ETIMEOUT'), falla('ETIMEOUT')),
+    });
+    const r = await descargador(new URL('http://lento.test/'), OPCIONES);
+    expect(r).toMatchObject({ ok: false, error: { codigo: 'tiempo-agotado' } });
+  });
+  it('un nombre que no existe acaba como «dns»', async () => {
+    const descargador = crearDescargador({
+      politica: { ipPermitida: () => true, puertosPermitidos: [80] },
+      resolutor: resolver(falla('ENOTFOUND'), falla('ENODATA')),
+    });
+    expect(await descargador(new URL('http://noexiste.test/'), OPCIONES)).toMatchObject({ ok: false, error: { codigo: 'dns' } });
   });
 });

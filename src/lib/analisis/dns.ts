@@ -54,8 +54,14 @@ export async function consultar<T>(pregunta: () => Promise<T[]>): Promise<Consul
   }
 }
 
-/** El dominio que se registra (ejemplo.co.uk para www.tienda.ejemplo.co.uk), o null si no lo hay (una IP, «localhost»…). */
-export const dominioRegistrable = (host: string): string | null => getDomain(host);
+/**
+ * El dominio que se registra (ejemplo.co.uk para www.tienda.ejemplo.co.uk), o null si no lo hay (una IP,
+ * «localhost», o el propio nombre de un alojamiento como «vercel.app»).
+ *
+ * Cuentan también los sufijos privados de alojamiento compartido: «miweb.vercel.app» y «otra.vercel.app»
+ * son webs de dueños distintos, no del mismo dominio, y el DNS de «vercel.app» no es de quien aloja ahí.
+ */
+export const dominioRegistrable = (host: string): string | null => getDomain(host, { allowPrivateDomains: true });
 
 const aTexto = (c: ConsultaDns<string[]>): ConsultaDns<string> =>
   c.estado === 'ok' ? { estado: 'ok', valores: c.valores.map((trozos) => trozos.join('')) } : c;

@@ -8,8 +8,14 @@ describe('dominioRegistrable', () => {
     ['ejemplo.com', 'ejemplo.com'],
     ['www.tienda.ejemplo.co.uk', 'ejemplo.co.uk'],
     ['blog.ejemplo.es', 'ejemplo.es'],
+    // Alojamiento compartido: cada subdominio es de un dueño distinto.
+    ['miweb.vercel.app', 'miweb.vercel.app'],
+    ['www.miweb.vercel.app', 'miweb.vercel.app'],
+    ['usuario.github.io', 'usuario.github.io'],
+    ['tienda.netlify.app', 'tienda.netlify.app'],
+    ['diario.blogspot.com', 'diario.blogspot.com'],
   ])('%s → %s', (host, esperado) => expect(dominioRegistrable(host)).toBe(esperado));
-  it.each(['localhost', '192.0.2.1', 'com'])('%s no tiene dominio registrable', (host) => expect(dominioRegistrable(host)).toBeNull());
+  it.each(['localhost', '192.0.2.1', 'com', 'vercel.app', 'github.io'])('%s no tiene dominio registrable', (host) => expect(dominioRegistrable(host)).toBeNull());
 });
 
 describe('consultar', () => {
