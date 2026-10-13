@@ -51,7 +51,10 @@ export const FIN_DE_VIDA_PHP: Readonly<Record<string, string>> = {
 export function versionDePhp(valor: string): { version: string; rama: string } | null {
   const m = /\bPHP\/(\d+)\.(\d+)(?:\.(\d+))?/i.exec(valor);
   if (!m) return null;
-  return { version: m[0].slice(m[0].indexOf('/') + 1), rama: `${m[1]}.${m[2]}` };
+  return {
+    version: m[0].slice(m[0].indexOf('/') + 1),
+    rama: `${m[1]}.${m[2]}`,
+  };
 }
 
 function comprobarPhp(r: RespuestaCapturada, ahora: Date): Hallazgo {
@@ -69,7 +72,11 @@ function comprobarPhp(r: RespuestaCapturada, ahora: Date): Hallazgo {
   }
   return Date.parse(`${fin}T23:59:59Z`) < ahora.getTime()
     ? h(id, 'fallo', 'alta', 8, { version: php.version, rama: php.rama, fin })
-    : h(id, 'correcto', 'alta', 8, { version: php.version, rama: php.rama, fin });
+    : h(id, 'correcto', 'alta', 8, {
+        version: php.version,
+        rama: php.rama,
+        fin,
+      });
 }
 
 // ------------------------------------------------------------------
@@ -91,7 +98,11 @@ function comprobarCabecerasDeTecnologia(r: RespuestaCapturada): Hallazgo {
     const valor = valorCabecera(r, nombre);
     if (valor === undefined) continue;
     // «x-aspnet-version: 4.0.30319» no lleva nombre delante: la cabecera ya lo dice.
-    if (PRODUCTO_CON_VERSION.test(valor) || VERSION_SUELTA.test(valor)) return h(id, 'mejorable', 'baja', 3, { cabecera: nombre, ...mostrar(valor) });
+    if (PRODUCTO_CON_VERSION.test(valor) || VERSION_SUELTA.test(valor))
+      return h(id, 'mejorable', 'baja', 3, {
+        cabecera: nombre,
+        ...mostrar(valor),
+      });
   }
   return h(id, 'correcto', 'baja', 3);
 }
@@ -148,11 +159,54 @@ const SEPARADOR = String.raw`(?:[-.@/])`;
 
 export const LIBRERIAS: readonly Libreria[] = [
   // jQuery < 3.5.0: XSS al procesar HTML (CVE-2020-11022 y CVE-2020-11023).
-  { nombre: 'jQuery', patron: new RegExp(String.raw`(?:^|[/_.-])jquery${SEPARADOR}${NUMERO}`, 'i'), porParametro: /(?:^|\/)jquery(?:\.min)?\.js$/i, obsoleta: (v) => v[0] < 3 || (v[0] === 3 && v[1] < 5) },
+  {
+    nombre: 'jQuery',
+    patron: new RegExp(String.raw`(?:^|[/_.-])jquery${SEPARADOR}${NUMERO}`, 'i'),
+    porParametro: /(?:^|\/)jquery(?:\.min)?\.js$/i,
+    obsoleta: (v) => v[0] < 3 || (v[0] === 3 && v[1] < 5),
+  },
   // Bootstrap < 3.4.1 y 4.x < 4.3.1: XSS en tooltips y popovers (CVE-2019-8331).
-  { nombre: 'Bootstrap', patron: new RegExp(String.raw`(?:^|[/_.-])bootstrap${SEPARADOR}${NUMERO}`, 'i'), obsoleta: (v) => v[0] < 3 || (v[0] === 3 && (v[1] < 4 || (v[1] === 4 && v[2] < 1))) || (v[0] === 4 && (v[1] < 3 || (v[1] === 3 && v[2] < 1))) },
+  {
+    nombre: 'Bootstrap',
+    patron: new RegExp(String.raw`(?:^|[/_.-])bootstrap${SEPARADOR}${NUMERO}`, 'i'),
+    obsoleta: (v) => v[0] < 3 || (v[0] === 3 && (v[1] < 4 || (v[1] === 4 && v[2] < 1))) || (v[0] === 4 && (v[1] < 3 || (v[1] === 3 && v[2] < 1))),
+  },
   // AngularJS (1.x): sin soporte desde el 31 de diciembre de 2021.
-  { nombre: 'AngularJS', patron: new RegExp(String.raw`(?:^|[/_.-])angular(?:\.?js)?${SEPARADOR}${NUMERO}`, 'i'), obsoleta: (v) => v[0] === 1 },
+  {
+    nombre: 'AngularJS',
+    patron: new RegExp(String.raw`(?:^|[/_.-])angular(?:\.?js)?${SEPARADOR}${NUMERO}`, 'i'),
+    obsoleta: (v) => v[0] === 1,
+  },
+  // jQuery UI < 1.13.0: XSS en varios componentes (CVE-2021-41182, CVE-2021-41183, CVE-2021-41184, CVE-2022-31160).
+  {
+    nombre: 'jQuery UI',
+    patron: new RegExp(String.raw`(?:^|[/_.-])(?:jquery[-.]?ui|jquery\.com/ui)${SEPARADOR}${NUMERO}`, 'i'),
+    obsoleta: (v) => v[0] < 1 || (v[0] === 1 && v[1] < 13),
+  },
+  // Lodash < 4.17.21: inyección de comandos y contaminación de prototipos (CVE-2021-23337, CVE-2020-8203).
+  {
+    nombre: 'Lodash',
+    patron: new RegExp(String.raw`(?:^|[/_.-])lodash(?:\.js)?${SEPARADOR}${NUMERO}`, 'i'),
+    obsoleta: (v) => v[0] < 4 || (v[0] === 4 && (v[1] < 17 || (v[1] === 17 && v[2] < 21))),
+  },
+  // Moment.js < 2.29.4: denegación de servicio por expresión regular (CVE-2022-31129).
+  {
+    nombre: 'Moment.js',
+    patron: new RegExp(String.raw`(?:^|[/_.-])moment(?:\.js)?${SEPARADOR}${NUMERO}`, 'i'),
+    obsoleta: (v) => v[0] < 2 || (v[0] === 2 && (v[1] < 29 || (v[1] === 29 && v[2] < 4))),
+  },
+  // Handlebars < 4.7.7: ejecución de código al compilar plantillas (CVE-2021-23369, CVE-2021-23383).
+  {
+    nombre: 'Handlebars',
+    patron: new RegExp(String.raw`(?:^|[/_.-])handlebars(?:\.js)?${SEPARADOR}${NUMERO}`, 'i'),
+    obsoleta: (v) => v[0] < 4 || (v[0] === 4 && (v[1] < 7 || (v[1] === 7 && v[2] < 7))),
+  },
+  // Vue 2 (y 1): sin soporte desde el 31 de diciembre de 2023.
+  {
+    nombre: 'Vue',
+    patron: new RegExp(String.raw`(?:^|[/_.-])vue${SEPARADOR}${NUMERO}`, 'i'),
+    obsoleta: (v) => v[0] < 3,
+  },
 ];
 
 function aVersion(texto: string): Version {
@@ -167,7 +221,10 @@ export interface LibreriaVista {
 }
 
 /** Librerías con versión que se ven en las direcciones de scripts y estilos de la página. Una sola pasada. */
-export function leerLibrerias(html: string): { vistas: LibreriaVista[]; completo: boolean } {
+export function leerLibrerias(html: string): {
+  vistas: LibreriaVista[];
+  completo: boolean;
+} {
   const vistas = new Map<string, LibreriaVista>();
   let revisadas = 0;
   let completo = true;
@@ -186,10 +243,18 @@ export function leerLibrerias(html: string): { vistas: LibreriaVista[]; completo
       if (version === undefined && lib.porParametro?.test(ruta)) version = /[?&]ver=(\d+\.\d+\.\d+)/i.exec(url)?.[1];
       if (version === undefined) continue;
       const clave = `${lib.nombre} ${version}`;
-      if (!vistas.has(clave)) vistas.set(clave, { nombre: lib.nombre, version, obsoleta: lib.obsoleta(aVersion(version)) });
+      if (!vistas.has(clave))
+        vistas.set(clave, {
+          nombre: lib.nombre,
+          version,
+          obsoleta: lib.obsoleta(aVersion(version)),
+        });
     }
   }
-  return { vistas: [...vistas.values()], completo: completo && !lectura.incompleto };
+  return {
+    vistas: [...vistas.values()],
+    completo: completo && !lectura.incompleto,
+  };
 }
 
 function comprobarLibrerias(r: RespuestaCapturada): Hallazgo {
@@ -199,11 +264,16 @@ function comprobarLibrerias(r: RespuestaCapturada): Hallazgo {
   const malas = vistas.filter((v) => v.obsoleta);
   if (malas.length > 0) {
     const lista = malas.slice(0, MAX_LIBRERIAS).map((v) => `${v.nombre} ${v.version}`);
-    return h(id, 'fallo', 'alta', 6, { lista, ...(malas.length > MAX_LIBRERIAS ? { mas: malas.length - MAX_LIBRERIAS } : {}) });
+    return h(id, 'fallo', 'alta', 6, {
+      lista,
+      ...(malas.length > MAX_LIBRERIAS ? { mas: malas.length - MAX_LIBRERIAS } : {}),
+    });
   }
   // Sin ninguna librería reconocida no se puede decir nada: no es un «todo bien». Y si la página no se
   // leyó entera, lo que no se vio podría ser peor que lo que sí.
-  return vistas.length === 0 || !completo || r.estadoCuerpo !== 'completo' ? h(id, 'no-aplica', 'alta', 6) : h(id, 'correcto', 'alta', 6, { total: vistas.length });
+  return vistas.length === 0 || !completo || r.estadoCuerpo !== 'completo'
+    ? h(id, 'no-aplica', 'alta', 6)
+    : h(id, 'correcto', 'alta', 6, { total: vistas.length });
 }
 
 // ------------------------------------------------------------------

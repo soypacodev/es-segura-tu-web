@@ -465,7 +465,7 @@ export const TEXTOS: Record<string, TextoHallazgo> = {
       return `La página carga ${nombres}: versiones con fallos de seguridad publicados o sin soporte. Quien conozca esos fallos puede intentar aprovecharlos en tu web.`;
     },
     noAplica: 'No se reconoció ninguna librería con versión en la página (solo se ven las que se cargan con la versión en su dirección; lo que va empaquetado dentro de otro archivo no se ve).',
-    arreglo: 'Actualiza la librería a una versión reciente (jQuery 3.5 o superior, Bootstrap 3.4.1 / 4.3.1 o superior) y, si es AngularJS, planifica el paso a una alternativa con soporte. Si tu web usa un gestor como WordPress, actualiza el tema y los plugins que la incluyen.',
+    arreglo: 'Actualiza la librería a una versión reciente (jQuery 3.5, jQuery UI 1.13, Bootstrap 3.4.1 / 4.3.1, Lodash 4.17.21, Moment.js 2.29.4 o Handlebars 4.7.7, como mínimo) y, si es AngularJS o Vue 2, planifica el paso a una alternativa con soporte. Si tu web usa un gestor como WordPress, actualiza el tema y los plugins que la incluyen.',
   },
   'tecnologias.generador': {
     titulo: 'La página no anuncia el gestor ni su versión',

@@ -16,7 +16,7 @@ Ocho categorías, con un peso distinto cada comprobación:
 | Contenido   | Contenido mixto, recursos externos sin integridad, formularios inseguros          |
 | Cookies     | Secure, HttpOnly, SameSite                                                        |
 | Privacidad  | Política de privacidad, cookies, aviso legal, rastreadores de terceros            |
-| Tecnologías | Versiones expuestas y librerías con fin de vida o vulnerabilidades conocidas      |
+| Tecnologías | Versiones expuestas y librerías con fin de vida o vulnerabilidades conocidas (jQuery, jQuery UI, Bootstrap, AngularJS, Vue 2, Lodash, Moment.js, Handlebars)      |
 | Rendimiento | Compresión, caché, tamaño, adaptación a móvil                                     |
 
 Los criterios y pesos están en [docs/CRITERIOS.md](docs/CRITERIOS.md).

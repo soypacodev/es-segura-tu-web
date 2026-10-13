@@ -3,7 +3,14 @@ import { AHORA, bien, respuesta, sitio } from '../pruebas/construir';
 import { FIN_DE_VIDA_PHP, MAX_SCRIPTS, comprobarTecnologias, generadorDeLaPagina, leerLibrerias, versionDePhp } from './tecnologias';
 
 const con = (cabeceras: Record<string, string[]> = {}, cuerpo?: string | null) =>
-  sitio({ https: bien(respuesta({ cabeceras: { ...respuesta().cabeceras, ...cabeceras }, ...(cuerpo !== undefined ? { cuerpo } : {}) })) });
+  sitio({
+    https: bien(
+      respuesta({
+        cabeceras: { ...respuesta().cabeceras, ...cabeceras },
+        ...(cuerpo !== undefined ? { cuerpo } : {}),
+      }),
+    ),
+  });
 const por = (c: ReturnType<typeof sitio>, id: string, ahora = AHORA) => comprobarTecnologias(c, ahora).find((x) => x.id === id);
 
 describe('versionDePhp', () => {
@@ -50,7 +57,9 @@ describe('tecnologias.php', () => {
   it('la lista de fechas es válida y, desde PHP 7.0, va en orden (la 5.6 acabó unas semanas después que la 7.0)', () => {
     const fechas = Object.values(FIN_DE_VIDA_PHP).map((f) => Date.parse(f));
     expect(fechas.every(Number.isFinite)).toBe(true);
-    const desde7 = Object.entries(FIN_DE_VIDA_PHP).filter(([rama]) => !rama.startsWith('5.')).map(([, f]) => Date.parse(f));
+    const desde7 = Object.entries(FIN_DE_VIDA_PHP)
+      .filter(([rama]) => !rama.startsWith('5.'))
+      .map(([, f]) => Date.parse(f));
     expect([...desde7].sort((a, b) => a - b)).toEqual(desde7);
   });
   it('una rama que no está en la lista: anterior a PHP 8 → caducada; posterior a la última conocida → vigente', () => {
@@ -64,7 +73,10 @@ describe('tecnologias.php', () => {
 
 describe('tecnologias.servidor', () => {
   it.each([['nginx/1.18.0'], ['Apache/2.4.41 (Ubuntu)'], ['Microsoft-IIS/10.0'], ['LiteSpeed/6.1']])('%s revela la versión', (v) => {
-    expect(por(con({ server: [v] }), 'tecnologias.servidor')).toMatchObject({ resultado: 'mejorable', datos: { valor: v } });
+    expect(por(con({ server: [v] }), 'tecnologias.servidor')).toMatchObject({
+      resultado: 'mejorable',
+      datos: { valor: v },
+    });
   });
   it.each([['nginx'], ['Apache'], ['cloudflare'], ['Vercel']])('%s no la revela', (v) => {
     expect(por(con({ server: [v] }), 'tecnologias.servidor')?.resultado).toBe('correcto');
@@ -74,7 +86,10 @@ describe('tecnologias.servidor', () => {
   });
   it('un valor larguísimo se recorta y se marca como recortado', () => {
     const largo = `Apache/2.4.1 ${'x'.repeat(300)}`;
-    const d = por(con({ server: [largo] }), 'tecnologias.servidor')?.datos as { valor: string; recortado?: boolean };
+    const d = por(con({ server: [largo] }), 'tecnologias.servidor')?.datos as {
+      valor: string;
+      recortado?: boolean;
+    };
     expect(d.valor.length).toBe(120);
     expect(d.recortado).toBe(true);
   });
@@ -87,7 +102,10 @@ describe('tecnologias.cabecera', () => {
     ['x-aspnet-version', '4.0.30319'],
     ['x-aspnetmvc-version', '5.2'],
   ])('%s: %s', (nombre, valor) => {
-    expect(por(con({ [nombre]: [valor] }), 'tecnologias.cabecera')).toMatchObject({ resultado: 'mejorable', datos: { cabecera: nombre, valor } });
+    expect(por(con({ [nombre]: [valor] }), 'tecnologias.cabecera')).toMatchObject({
+      resultado: 'mejorable',
+      datos: { cabecera: nombre, valor },
+    });
   });
   it('«Express» a secas no cuenta versión', () => {
     expect(por(con({ 'x-powered-by': ['Express'] }), 'tecnologias.cabecera')?.resultado).toBe('correcto');
@@ -128,7 +146,14 @@ describe('tecnologias.generador', () => {
 
 describe('comprobarTecnologias', () => {
   it('sin HTTPS no hay nada que valorar', () => {
-    expect(comprobarTecnologias(sitio({ https: { ok: false, error: { codigo: 'conexion', mensaje: 'x' } } }), AHORA)).toEqual([]);
+    expect(
+      comprobarTecnologias(
+        sitio({
+          https: { ok: false, error: { codigo: 'conexion', mensaje: 'x' } },
+        }),
+        AHORA,
+      ),
+    ).toEqual([]);
   });
   it('un sitio limpio saca todo correcto salvo PHP, que no aplica', () => {
     expect(comprobarTecnologias(sitio(), AHORA).map((x) => [x.id, x.resultado])).toEqual([
@@ -141,7 +166,10 @@ describe('comprobarTecnologias', () => {
   });
 });
 
-const nombres = (html: string) => leerLibrerias(html).vistas.map((v) => `${v.nombre} ${v.version}${v.obsoleta ? ' !' : ''}`).sort();
+const nombres = (html: string) =>
+  leerLibrerias(html)
+    .vistas.map((v) => `${v.nombre} ${v.version}${v.obsoleta ? ' !' : ''}`)
+    .sort();
 const scripts = (...src: string[]) => `<html><head>${src.map((s) => `<script src="${s}"></script>`).join('')}</head></html>`;
 
 describe('leerLibrerias', () => {
@@ -161,11 +189,27 @@ describe('leerLibrerias', () => {
     ['https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js', ['AngularJS 1.8.2 !']],
     ['https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.8.2/angular.min.js', ['AngularJS 1.8.2 !']],
     ['/vendor/angular-1.5.8.min.js', ['AngularJS 1.5.8 !']],
+    ['/jquery-ui-1.12.1.min.js', ['jQuery UI 1.12.1 !']],
+    ['https://code.jquery.com/ui/1.13.2/jquery-ui.min.js', ['jQuery UI 1.13.2']],
+    ['https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js', ['jQuery UI 1.12.1 !']],
+    ['https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.15/lodash.min.js', ['Lodash 4.17.15 !']],
+    ['https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js', ['Lodash 4.17.21']],
+    ['/vendor/lodash-3.10.1.min.js', ['Lodash 3.10.1 !']],
+    ['https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js', ['Moment.js 2.29.1 !']],
+    ['/moment-2.29.4.min.js', ['Moment.js 2.29.4']],
+    ['https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.0.5/handlebars.min.js', ['Handlebars 4.0.5 !']],
+    ['/handlebars-4.7.8.min.js', ['Handlebars 4.7.8']],
+    ['https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.min.js', ['Vue 2.6.14 !']],
+    ['https://unpkg.com/vue@3.4.21/dist/vue.global.js', ['Vue 3.4.21']],
   ])('%s', (src, esperado) => expect(nombres(scripts(src))).toEqual(esperado));
 
   it.each([
     '/jquery.min.js', // sin versión
-    '/jquery-ui-1.12.1.min.js', // otra librería
+    '/jquery-uix-1.12.1.min.js',
+    '/vue-router-3.0.1.js', // otra librería
+    '/moment-timezone-0.5.31.js',
+    '/lodash-es-4.17.1.js',
+    '/vue.min.js', // sin versión
     '/jquery-migrate-3.0.0.min.js',
     '/jquery.mobile-1.4.5.min.js',
     '/bootstrap-icons/1.11.0/font.css',
@@ -236,7 +280,10 @@ describe('tecnologias.librerias', () => {
 });
 
 describe('librerías y generador con la página cortada', () => {
-  const cortada = (html: string) => sitio({ https: bien(respuesta({ cuerpo: html, estadoCuerpo: 'recortado' })) });
+  const cortada = (html: string) =>
+    sitio({
+      https: bien(respuesta({ cuerpo: html, estadoCuerpo: 'recortado' })),
+    });
   it('si se ve una librería buena pero la página se cortó, no se da el visto bueno', () => {
     expect(por(cortada(scripts('/jquery-3.7.1.js')), 'tecnologias.librerias')?.resultado).toBe('no-aplica');
   });
