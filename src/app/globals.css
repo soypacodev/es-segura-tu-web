@@ -502,6 +502,8 @@ p {
 
 .informe {
   display: grid;
+  /* Sin esto, el contenido que no se parte (etiquetas, gráficos) ensancha la columna más que la pantalla. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 40px;
   padding-block: 24px 0;
 }
