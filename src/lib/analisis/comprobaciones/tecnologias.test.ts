@@ -47,10 +47,18 @@ describe('tecnologias.php', () => {
     expect(por(con({ 'x-powered-by': ['PHP/9.0.1'] }), 'tecnologias.php')?.resultado).toBe('correcto');
     expect(por(con({ 'x-powered-by': ['PHP/8.9.0'] }), 'tecnologias.php')?.resultado).toBe('correcto');
   });
-  it('la lista de fechas está en orden y es válida', () => {
+  it('la lista de fechas es válida y, desde PHP 7.0, va en orden (la 5.6 acabó unas semanas después que la 7.0)', () => {
     const fechas = Object.values(FIN_DE_VIDA_PHP).map((f) => Date.parse(f));
     expect(fechas.every(Number.isFinite)).toBe(true);
-    expect([...fechas].sort((a, b) => a - b)).toEqual(fechas);
+    const desde7 = Object.entries(FIN_DE_VIDA_PHP).filter(([rama]) => !rama.startsWith('5.')).map(([, f]) => Date.parse(f));
+    expect([...desde7].sort((a, b) => a - b)).toEqual(desde7);
+  });
+  it('una rama que no está en la lista: anterior a PHP 8 → caducada; posterior a la última conocida → vigente', () => {
+    const rama = (version: string) => por(con({ 'x-powered-by': [`PHP/${version}`] }), 'tecnologias.php')?.resultado;
+    expect(rama('5.5.9')).toBe('fallo');
+    expect(rama('4.4.9')).toBe('fallo');
+    expect(rama('8.9.0')).toBe('correcto');
+    expect(rama('9.0.1')).toBe('correcto');
   });
 });
 
@@ -151,6 +159,7 @@ describe('leerLibrerias', () => {
     ['/bootstrap-4.3.1.min.js', ['Bootstrap 4.3.1']],
     ['/bootstrap-5.0.0.min.js', ['Bootstrap 5.0.0']],
     ['https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js', ['AngularJS 1.8.2 !']],
+    ['https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.8.2/angular.min.js', ['AngularJS 1.8.2 !']],
     ['/vendor/angular-1.5.8.min.js', ['AngularJS 1.5.8 !']],
   ])('%s', (src, esperado) => expect(nombres(scripts(src))).toEqual(esperado));
 
@@ -165,6 +174,8 @@ describe('leerLibrerias', () => {
     'https://cdn.jsdelivr.net/npm/@angular/core@16.0.0/index.js', // Angular moderno, no AngularJS
     '/angular-material@1.2.0.js',
     '/otra.js?ver=3.6.0', // el parámetro solo se mira en jquery(.min).js
+    '/jquery.js?v=1.2', // un número de caché, no la versión
+    '/jquery.min.js?ver=1.2', // sin tres cifras tampoco se fía
   ])('no confunde %s', (src) => expect(nombres(scripts(src))).toEqual([]));
 
   it('solo la rama 1 de AngularJS está sin soporte', () => {
@@ -221,5 +232,19 @@ describe('tecnologias.librerias', () => {
   });
   it('sin HTML que leer, no aplica', () => {
     expect(por(con({}, null), 'tecnologias.librerias')?.resultado).toBe('no-aplica');
+  });
+});
+
+describe('librerías y generador con la página cortada', () => {
+  const cortada = (html: string) => sitio({ https: bien(respuesta({ cuerpo: html, estadoCuerpo: 'recortado' })) });
+  it('si se ve una librería buena pero la página se cortó, no se da el visto bueno', () => {
+    expect(por(cortada(scripts('/jquery-3.7.1.js')), 'tecnologias.librerias')?.resultado).toBe('no-aplica');
+  });
+  it('pero si en lo leído ya hay una mala, es fallo igualmente', () => {
+    expect(por(cortada(scripts('/jquery-1.12.4.js')), 'tecnologias.librerias')?.resultado).toBe('fallo');
+  });
+  it('sin etiqueta generator en una página cortada, no aplica; si la anuncia, se avisa igual', () => {
+    expect(por(cortada('<html></html>'), 'tecnologias.generador')?.resultado).toBe('no-aplica');
+    expect(por(cortada('<meta name="generator" content="WordPress 5.8.1">'), 'tecnologias.generador')?.resultado).toBe('mejorable');
   });
 });

@@ -10,24 +10,17 @@
 
 import { dominioRegistrable } from '../dns';
 import type { CapturaSitio, Hallazgo, RespuestaCapturada } from '../tipos';
-import { etiquetasDe } from './html';
+import { etiquetasDe, type EstadoLectura } from './html';
 import { esServidorDeRastreo } from './privacidad';
+import { datosDeLista, hallazgoDe } from './utiles';
 
 /** Más etiquetas de recursos que esto no se leen (cada una cuesta). Se marca como «incompleto». */
 export const MAX_RECURSOS = 5_000;
-const MAX_NOMBRES = 5;
 
 const ETIQUETAS = new Set(['script', 'link', 'iframe', 'img', 'audio', 'video', 'source', 'embed', 'object', 'form']);
 const SOLO_BASE = new Set(['base']);
 
-const h = (id: string, resultado: Hallazgo['resultado'], gravedad: Hallazgo['gravedad'], peso: number, datos?: Hallazgo['datos']): Hallazgo => ({
-  id,
-  categoria: 'contenido',
-  resultado,
-  gravedad,
-  peso,
-  ...(datos ? { datos } : {}),
-});
+const h = hallazgoDe('contenido');
 
 /** Resuelve una dirección escrita en la página; null si no es una web (data:, javascript:, mailto:…) o no es válida. */
 export function resolverUrl(valor: string | undefined, base: URL): URL | null {
@@ -60,7 +53,7 @@ export interface Recursos {
 const mismoSitio = (a: string, b: string) => a === b || (dominioRegistrable(a) ?? a) === (dominioRegistrable(b) ?? b);
 
 export function leerRecursos(html: string, urlFinal: URL): Recursos {
-  const [base] = [...etiquetasDe(html, SOLO_BASE)];
+  const base = etiquetasDe(html, SOLO_BASE).next().value;
   const raiz = resolverUrl(base?.atributos['href'], urlFinal) ?? urlFinal;
   const hostPagina = urlFinal.hostname.toLowerCase();
   const paginaCifrada = urlFinal.protocol === 'https:';
@@ -69,8 +62,9 @@ export function leerRecursos(html: string, urlFinal: URL): Recursos {
   let formularios = 0;
   let leidas = 0;
   let completo = true;
+  const lectura: EstadoLectura = { incompleto: false };
 
-  for (const e of etiquetasDe(html, ETIQUETAS)) {
+  for (const e of etiquetasDe(html, ETIQUETAS, lectura)) {
     if (leidas >= MAX_RECURSOS) {
       completo = false;
       break;
@@ -127,12 +121,8 @@ export function leerRecursos(html: string, urlFinal: URL): Recursos {
     scriptsAjenos: [...r.scriptsAjenos],
     formulariosSinCifrar: [...r.formulariosSinCifrar],
     formularios,
-    completo,
+    completo: completo && !lectura.incompleto,
   };
-}
-
-function lista(hosts: string[]): Hallazgo['datos'] {
-  return { nombres: hosts.slice(0, MAX_NOMBRES), total: hosts.length, ...(hosts.length > MAX_NOMBRES ? { mas: hosts.length - MAX_NOMBRES } : {}) };
 }
 
 /** Máximo de servidores ajenos con código en la página para dar el punto por bueno. */
@@ -141,26 +131,26 @@ export const MAX_SCRIPTS_AJENOS = 5;
 function comprobarMixto(rec: Recursos, cifrada: boolean): Hallazgo {
   const id = 'contenido.mixto';
   if (!cifrada) return h(id, 'no-aplica', 'alta', 8);
-  if (rec.mixtoActivo.length > 0) return h(id, 'fallo', 'alta', 8, { ...lista(rec.mixtoActivo), pasivos: rec.mixtoPasivo.length });
-  if (rec.mixtoPasivo.length > 0) return h(id, 'mejorable', 'media', 8, lista(rec.mixtoPasivo));
+  if (rec.mixtoActivo.length > 0) return h(id, 'fallo', 'alta', 8, { ...datosDeLista(rec.mixtoActivo), pasivos: rec.mixtoPasivo.length });
+  if (rec.mixtoPasivo.length > 0) return h(id, 'mejorable', 'media', 8, datosDeLista(rec.mixtoPasivo));
   return rec.completo ? h(id, 'correcto', 'alta', 8) : h(id, 'no-aplica', 'alta', 8);
 }
 
 function comprobarIntegridad(rec: Recursos): Hallazgo {
   const id = 'contenido.sri';
-  if (rec.sinIntegridad.length > 0) return h(id, 'mejorable', 'media', 4, lista(rec.sinIntegridad));
+  if (rec.sinIntegridad.length > 0) return h(id, 'mejorable', 'media', 4, datosDeLista(rec.sinIntegridad));
   return rec.completo ? h(id, 'correcto', 'media', 4) : h(id, 'no-aplica', 'media', 4);
 }
 
 function comprobarScriptsAjenos(rec: Recursos): Hallazgo {
   const id = 'contenido.terceros';
-  if (rec.scriptsAjenos.length > MAX_SCRIPTS_AJENOS) return h(id, 'mejorable', 'baja', 3, lista(rec.scriptsAjenos));
+  if (rec.scriptsAjenos.length > MAX_SCRIPTS_AJENOS) return h(id, 'mejorable', 'baja', 3, datosDeLista(rec.scriptsAjenos));
   return rec.completo ? h(id, 'correcto', 'baja', 3, { total: rec.scriptsAjenos.length }) : h(id, 'no-aplica', 'baja', 3);
 }
 
 function comprobarFormularios(rec: Recursos): Hallazgo {
   const id = 'contenido.formulario';
-  if (rec.formulariosSinCifrar.length > 0) return h(id, 'fallo', 'critica', 6, lista(rec.formulariosSinCifrar));
+  if (rec.formulariosSinCifrar.length > 0) return h(id, 'fallo', 'critica', 6, datosDeLista(rec.formulariosSinCifrar));
   if (rec.formularios === 0 || !rec.completo) return h(id, 'no-aplica', 'critica', 6);
   return h(id, 'correcto', 'critica', 6);
 }

@@ -6,7 +6,7 @@
 // - Algunos fallos graves ponen un techo: por muy bien que vaya lo demás, la
 //   nota no puede pasar de esa letra.
 //
-// Los criterios completos, con el porqué de cada peso, irán en docs/CRITERIOS.md.
+// Los criterios completos, con el porqué de cada peso, están en docs/CRITERIOS.md.
 
 import type { Categoria, Hallazgo, Letra, Resultado } from './tipos';
 

@@ -8,7 +8,8 @@
 // cuando se ha leído la página entera.
 
 import type { CapturaSitio, Hallazgo, RespuestaCapturada } from '../tipos';
-import { enlacesDe } from './html';
+import { enlacesDe, textoQueCarga } from './html';
+import { datosDeLista, hallazgoDe } from './utiles';
 
 /** Servicios de analítica, publicidad y seguimiento muy extendidos, por el dominio desde el que se cargan. */
 const RASTREADORES: readonly { nombre: string; dominios: readonly string[] }[] = [
@@ -51,25 +52,25 @@ const AVISO_PROPIO = /(cookie[-_ ]?(banner|notice|consent|bar|law)|gdpr[-_ ]?(ba
 const POLITICA = /privacidad|privacy|protecci[oó]n\s+de\s+datos|rgpd|gdpr/i;
 const AVISO_LEGAL = /aviso\s+legal|legal\s+notice|imprint|impressum|\bterms\b|t[eé]rminos|condiciones\s+(de\s+)?(uso|contrataci[oó]n)/i;
 
-const MAX_NOMBRES = 5;
 
-const h = (id: string, resultado: Hallazgo['resultado'], gravedad: Hallazgo['gravedad'], peso: number, datos?: Hallazgo['datos']): Hallazgo => ({
-  id,
-  categoria: 'privacidad',
-  resultado,
-  gravedad,
-  peso,
-  ...(datos ? { datos } : {}),
-});
+const h = hallazgoDe('privacidad');
 
 const escapar = (d: string) => d.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-/** Rastreadores cuyo dominio aparece en el HTML (en etiquetas o en el código de la página). */
+/** Los patrones se compilan una vez, no en cada análisis. */
+const PATRONES = RASTREADORES.map((r) => ({ nombre: r.nombre, patrones: r.dominios.map((d) => new RegExp(`(^|[^a-z0-9-])${escapar(d)}($|[^a-z0-9-])`)) }));
+
+/** Lo que carga la página, calculado una vez por página aunque se pregunte varias veces (rastreadores y consentimiento). */
+let ultimo: { html: string; texto: string } | null = null;
+function cargaDe(html: string): string {
+  if (ultimo?.html !== html) ultimo = { html, texto: textoQueCarga(html) };
+  return ultimo.texto;
+}
+
+/** Rastreadores cuyo dominio aparece en lo que la página carga o ejecuta (no en su texto visible ni en sus enlaces). */
 export function rastreadoresEnHtml(html: string): string[] {
-  const minusculas = html.toLowerCase();
-  return RASTREADORES.filter((r) =>
-    r.dominios.some((d) => new RegExp(`(^|[^a-z0-9-])${escapar(d)}($|[^a-z0-9-])`).test(minusculas)),
-  ).map((r) => r.nombre);
+  const minusculas = cargaDe(html).toLowerCase();
+  return PATRONES.filter((r) => r.patrones.some((p) => p.test(minusculas))).map((r) => r.nombre);
 }
 
 /** Nombre del gestor de avisos de cookies detectado, «propio» si parece un aviso hecho a mano, o null. */
@@ -83,7 +84,7 @@ export const esServidorDeRastreo = (host: string) =>
   RASTREADORES.some((r) => r.dominios.some((d) => host === d || host.endsWith(`.${d}`)));
 
 export function usaFuentesDeGoogle(html: string): boolean {
-  return /fonts\.(googleapis|gstatic)\.com/i.test(html);
+  return /fonts\.(googleapis|gstatic)\.com/i.test(cargaDe(html));
 }
 
 /** «sí» si algún enlace encaja, «no» si ninguno, «no se sabe» si hubo demasiados enlaces para mirarlos todos. */
@@ -104,16 +105,11 @@ function safe(s: string): string {
 /** Con la página entera se puede afirmar que algo falta; si se recortó, solo se afirma lo que sí se vio. */
 const paginaCompleta = (r: RespuestaCapturada) => r.cuerpo !== null && r.estadoCuerpo === 'completo';
 
-function lista(nombres: string[]): Hallazgo['datos'] {
-  const mostrados = nombres.slice(0, MAX_NOMBRES);
-  return { nombres: mostrados, total: nombres.length, ...(nombres.length > MAX_NOMBRES ? { mas: nombres.length - MAX_NOMBRES } : {}) };
-}
-
 function comprobarRastreadores(r: RespuestaCapturada): Hallazgo {
   const id = 'privacidad.rastreadores';
   if (r.cuerpo === null) return h(id, 'no-aplica', 'media', 4);
   const vistos = rastreadoresEnHtml(r.cuerpo);
-  if (vistos.length > 0) return h(id, 'mejorable', 'media', 4, lista(vistos));
+  if (vistos.length > 0) return h(id, 'mejorable', 'media', 4, datosDeLista(vistos));
   return paginaCompleta(r) ? h(id, 'correcto', 'media', 4) : h(id, 'no-aplica', 'media', 4);
 }
 
@@ -124,7 +120,7 @@ function comprobarConsentimiento(r: RespuestaCapturada): Hallazgo {
   if (vistos.length === 0) return h(id, 'no-aplica', 'alta', 8);
   const aviso = avisoDeCookies(r.cuerpo);
   if (aviso !== null) return h(id, 'correcto', 'alta', 8, { gestor: aviso });
-  return paginaCompleta(r) ? h(id, 'mejorable', 'alta', 8, lista(vistos)) : h(id, 'no-aplica', 'alta', 8);
+  return paginaCompleta(r) ? h(id, 'mejorable', 'alta', 8, datosDeLista(vistos)) : h(id, 'no-aplica', 'alta', 8);
 }
 
 function comprobarFuentes(r: RespuestaCapturada): Hallazgo {

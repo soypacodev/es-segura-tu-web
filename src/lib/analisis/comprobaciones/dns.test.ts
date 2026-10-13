@@ -21,6 +21,9 @@ describe('politicaSpf', () => {
     ['v=spf1 ?all', '?all'],
     ['v=spf1 +all', '+all'],
     ['v=spf1 all', '+all'],
+    ['v=spf1 -all +all', '-all'], // gana el primer «all»: lo de detrás no se evalúa
+    ['v=spf1 +all -all', '+all'],
+    ['v=spf1 include:_spf.google.com ~all', '~all'],
     ['v=spf1 mx', 'sin-all'],
     ['v=spf1 redirect=_spf.ejemplo.com', 'redirect'],
     ['V=SPF1 MX -ALL', '-all'],

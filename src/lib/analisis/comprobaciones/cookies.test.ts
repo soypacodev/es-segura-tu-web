@@ -35,10 +35,10 @@ describe('parsearSetCookie', () => {
 });
 
 describe('esCookieDeSesion', () => {
-  it.each(['PHPSESSID', 'sessionid', 'connect.sid', 'auth_token', 'jwt', 'wordpress_logged_in_x', 'XSRF-TOKEN', 'csrftoken'])('%s sí', (n) => {
+  it.each(['PHPSESSID', 'sessionid', 'connect.sid', 'auth_token', 'jwt', 'wordpress_logged_in_x'])('%s sí', (n) => {
     expect(esCookieDeSesion({ nombre: n, secure: false, httpOnly: false, sameSite: null })).toBe(true);
   });
-  it.each(['_ga', 'idioma', 'tema', 'carrito', 'cookie_aviso'])('%s no', (n) => {
+  it.each(['_ga', 'idioma', 'tema', 'carrito', 'cookie_aviso', 'XSRF-TOKEN', 'csrftoken', 'csrf_token', '_csrf'])('%s no (las de CSRF deben poder leerse desde JavaScript)', (n) => {
     expect(esCookieDeSesion({ nombre: n, secure: false, httpOnly: false, sameSite: null })).toBe(false);
   });
 });
@@ -73,6 +73,12 @@ describe('comprobarCookies', () => {
   it('con más de cinco cookies sin Secure lista cinco y dice cuántas faltan (no recorta en silencio)', () => {
     const r = comprobarCookies(conCookies(...['a', 'b', 'c', 'd', 'e', 'f', 'g'].map((n) => `${n}=1; SameSite=Lax`)));
     expect(por(r, 'cookies.secure')?.datos).toEqual({ total: 7, sin: ['a', 'b', 'c', 'd', 'e'], mas: 2 });
+  });
+
+  it('un nombre enorme se muestra recortado y con «…»: el recorte se ve', () => {
+    const r = comprobarCookies(conCookies(`${'x'.repeat(500)}=1; SameSite=Lax`));
+    const sin = por(r, 'cookies.secure')?.datos?.sin as string[];
+    expect(sin[0]).toBe(`${'x'.repeat(60)}…`);
   });
 
   it('un nombre repetido se cuenta una vez', () => {

@@ -4,6 +4,7 @@
 //
 // Todas son funciones puras: reciben la captura ya hecha (ver descarga.ts).
 
+import { dominioRegistrable } from '../dns';
 import type { CapturaSitio, CertificadoVisto, Hallazgo, Letra, RespuestaCapturada } from '../tipos';
 import { valorCabecera } from './utiles';
 
@@ -128,10 +129,28 @@ export function clasificarErrorCertificado(codigo: string | null): MotivoCertifi
   }
 }
 
-/** Un certificado caducado es un descuido (techo D); cualquier otro fallo de confianza impide usar la web (techo F). */
-const techoDe = (motivo: MotivoCertificado): Letra => (motivo === 'caducado' ? 'D' : 'F');
+/**
+ * Un certificado caducado es un descuido (techo D). Una cadena incompleta se ve mal en programas, móviles y
+ * servicios de correo, pero los navegadores de escritorio suelen completarla solos (techo C): además, Node no
+ * distingue entre «falta un intermedio» y «la raíz no es de las que conoce». Cualquier otro fallo de confianza
+ * impide usar la web (techo F).
+ */
+const techoDe = (motivo: MotivoCertificado): Letra => (motivo === 'caducado' ? 'D' : motivo === 'cadena-incompleta' ? 'C' : 'F');
 
 const ORDEN_PROTOCOLOS = ['SSLv3', 'TLSv1', 'TLSv1.1', 'TLSv1.2', 'TLSv1.3'];
+
+/**
+ * Cuántos días antes de caducar se da el aviso. Con certificados de 90 días (los de Let's Encrypt de siempre),
+ * 29 y 14 días; con los de vida más corta (45 días o menos, que se renuevan solos a mitad de vida) los umbrales
+ * se reducen en proporción —15 % y 33 % de su duración—, para no dar por «a punto de caducar» a uno recién renovado.
+ */
+export function umbralesDeCaducidad(tls: { validoDesde: string | null; validoHasta: string | null } | undefined): { fallo: number; mejorable: number } {
+  const desde = tls?.validoDesde ? Date.parse(tls.validoDesde) : NaN;
+  const hasta = tls?.validoHasta ? Date.parse(tls.validoHasta) : NaN;
+  const duracion = (hasta - desde) / DIA_MS;
+  if (!Number.isFinite(duracion) || duracion <= 0) return { fallo: 14, mejorable: 29 };
+  return { fallo: Math.min(14, Math.ceil(duracion * 0.15)), mejorable: Math.min(29, Math.ceil(duracion * 0.33)) };
+}
 
 function comprobarCertificados(certificados: CertificadoVisto[], ahora: Date): Hallazgo[] {
   if (certificados.length === 0) return [];
@@ -162,7 +181,8 @@ function comprobarCertificados(certificados: CertificadoVisto[], ahora: Date): H
       dias: Math.floor((Date.parse(c.tls.validoHasta as string) - ahora.getTime()) / DIA_MS),
     }));
     const proximo = cuentas.reduce((a, b) => (b.dias < a.dias ? b : a));
-    const estado = proximo.dias <= 14 ? 'fallo' : proximo.dias <= 29 ? 'mejorable' : 'correcto';
+    const { fallo, mejorable } = umbralesDeCaducidad(vigentes.find((c) => c.host === proximo.host)?.tls);
+    const estado = proximo.dias <= fallo ? 'fallo' : proximo.dias <= mejorable ? 'mejorable' : 'correcto';
     resultado.push(h('https.certificado.caducidad', estado, 'alta', 4, { datos: { host: proximo.host, dias: proximo.dias } }));
   }
 
@@ -208,6 +228,9 @@ function comprobarRedireccionHttp(captura: CapturaSitio): Hallazgo {
     }
     if (destino?.protocol === 'https:') {
       const permanente = r.estado === 301 || r.estado === 308;
+      // A otro dominio: el visitante acaba bien, pero HSTS y el resto de protecciones no valen para el dominio de origen.
+      const mismoDominio = (dominioRegistrable(destino.hostname) ?? destino.hostname) === (dominioRegistrable(captura.host) ?? captura.host);
+      if (!mismoDominio) return h(id, 'mejorable', 'alta', 8, { datos: { estado: r.estado, otroDominio: destino.hostname } });
       return permanente
         ? h(id, 'correcto', 'alta', 8, { datos: { estado: r.estado } })
         : h(id, 'mejorable', 'alta', 8, { datos: { estado: r.estado, permanente: false } });

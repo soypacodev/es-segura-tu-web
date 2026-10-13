@@ -9,7 +9,8 @@
 // se leyó entera.
 
 import type { CapturaSitio, Hallazgo, RespuestaCapturada } from '../tipos';
-import { etiquetasDe } from './html';
+import { etiquetasDe, type EstadoLectura } from './html';
+import { hallazgoDe } from './utiles';
 
 /** HTML de más de esto (ya descomprimido) se considera pesado. */
 export const PESO_MAX_HTML = 500_000;
@@ -22,14 +23,7 @@ export const LIMITE_CODIFICACION = 1_024;
 const ETIQUETAS = new Set(['html', 'meta', 'title']);
 const COMPRESIONES = new Set(['gzip', 'br', 'zstd', 'deflate', 'compress']);
 
-const h = (id: string, resultado: Hallazgo['resultado'], gravedad: Hallazgo['gravedad'], peso: number, datos?: Hallazgo['datos']): Hallazgo => ({
-  id,
-  categoria: 'rendimiento',
-  resultado,
-  gravedad,
-  peso,
-  ...(datos ? { datos } : {}),
-});
+const h = hallazgoDe('rendimiento');
 
 /**
  * «width=device-width» adapta la página a la pantalla. Con solo «initial-scale» (sin un ancho fijo en píxeles)
@@ -52,10 +46,10 @@ export interface Cabecera {
 }
 
 /** Una sola pasada por las etiquetas html, meta y title; para en cuanto tiene todo. */
-export function leerCabecera(html: string): Cabecera {
+export function leerCabecera(html: string, lectura?: EstadoLectura): Cabecera {
   const c: Cabecera = { idioma: null, viewport: false, codificacionMeta: false, titulo: null };
   let idiomaVisto = false;
-  for (const e of etiquetasDe(html, ETIQUETAS)) {
+  for (const e of etiquetasDe(html, ETIQUETAS, lectura)) {
     if (e.nombre === 'html' && !idiomaVisto) {
       idiomaVisto = true;
       const lang = (e.atributos.lang ?? e.atributos['xml:lang'] ?? '').trim();
@@ -118,8 +112,9 @@ export function comprobarRendimiento(captura: CapturaSitio, maxLeido = 1_000_000
   const r = captura.https.respuesta;
   // Sin HTML (otro tipo de contenido o codificación desconocida) no hay nada que valorar.
   if (r.cuerpo === null) return [];
-  const completo = r.estadoCuerpo === 'completo';
-  const c = leerCabecera(r.cuerpo);
+  const lectura: EstadoLectura = { incompleto: false };
+  const c = leerCabecera(r.cuerpo, lectura);
+  const completo = r.estadoCuerpo === 'completo' && !lectura.incompleto;
   const ausente = (hay: boolean, id: string, gravedad: Hallazgo['gravedad'], pesoH: number): Hallazgo =>
     hay ? h(id, 'correcto', gravedad, pesoH) : h(id, completo ? 'mejorable' : 'no-aplica', gravedad, pesoH);
 

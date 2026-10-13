@@ -2,15 +2,9 @@
 // Funciones puras: reciben la captura ya hecha.
 
 import type { CapturaSitio, Hallazgo, RespuestaCapturada } from '../tipos';
-import { valorCabecera } from './utiles';
+import { hallazgoDe, valorCabecera } from './utiles';
 
-const h = (
-  id: string,
-  resultado: Hallazgo['resultado'],
-  gravedad: Hallazgo['gravedad'],
-  peso: number,
-  datos?: Hallazgo['datos'],
-): Hallazgo => ({ id, categoria: 'cabeceras', resultado, gravedad, peso, ...(datos ? { datos } : {}) });
+const h = hallazgoDe('cabeceras');
 
 // ------------------------------------------------------------------
 // Content-Security-Policy
@@ -83,25 +77,30 @@ function comprobarCsp(respuesta: RespuestaCapturada): Hallazgo {
 // Resto de cabeceras
 // ------------------------------------------------------------------
 
+/** «*», «https:» o «https://*» como origen de frame-ancestors dejan que cualquier web incruste la tuya. */
+const permiteCualquierSitio = (origen: string) => origen === '*' || origen === 'http:' || origen === 'https:' || /^https?:\/\/\*$/.test(origen);
+
 function comprobarClickjacking(respuesta: RespuestaCapturada): Hallazgo {
   const id = 'cabeceras.clickjacking';
   const csp = valorCabecera(respuesta, 'content-security-policy');
   const conFrameAncestors = (csp ? parsearCsp(csp) : []).some((directivas) => {
     const valores = directivas.get('frame-ancestors');
-    return valores !== undefined && !valores.includes('*');
+    return valores !== undefined && !valores.some(permiteCualquierSitio);
   });
   if (conFrameAncestors) return h(id, 'correcto', 'media', 6);
 
-  const xfo = valorCabecera(respuesta, 'x-frame-options')?.trim().toUpperCase();
+  // Algunos servidores repiten la cabecera («DENY, DENY»): si todas dicen lo mismo, vale.
+  const valores = new Set((valorCabecera(respuesta, 'x-frame-options') ?? '').split(',').map((v) => v.trim().toUpperCase()));
+  const xfo = valores.size === 1 ? [...valores][0] : undefined;
   if (xfo === 'DENY' || xfo === 'SAMEORIGIN') return h(id, 'correcto', 'media', 6);
   if (xfo?.startsWith('ALLOW-FROM')) return h(id, 'mejorable', 'media', 6, { obsoleta: true });
-  return h(id, 'fallo', 'media', 6, xfo ? { valor: xfo } : undefined);
+  return h(id, 'fallo', 'media', 6);
 }
 
 function comprobarNosniff(respuesta: RespuestaCapturada): Hallazgo {
   const valor = valorCabecera(respuesta, 'x-content-type-options');
   const correcto = valor?.split(',').some((v) => v.trim().toLowerCase() === 'nosniff') ?? false;
-  return correcto ? h('cabeceras.nosniff', 'correcto', 'media', 4) : h('cabeceras.nosniff', 'fallo', 'media', 4, valor ? { valor } : undefined);
+  return h('cabeceras.nosniff', correcto ? 'correcto' : 'fallo', 'media', 4);
 }
 
 const POLITICAS_REFERRER = new Set([
@@ -126,7 +125,8 @@ function comprobarReferrer(respuesta: RespuestaCapturada): Hallazgo {
     .map((v) => v.trim().toLowerCase())
     .filter((v) => POLITICAS_REFERRER.has(v));
   const efectiva = reconocidas[reconocidas.length - 1];
-  if (efectiva === undefined) return h(id, 'mejorable', 'baja', 3, { valor });
+  // Un valor que ningún navegador reconoce equivale a no haber puesto la cabecera.
+  if (efectiva === undefined) return h(id, 'mejorable', 'baja', 3, { desconocida: true });
   if (efectiva === 'unsafe-url') return h(id, 'fallo', 'baja', 3, { valor: efectiva });
   if (efectiva === 'no-referrer-when-downgrade') return h(id, 'mejorable', 'baja', 3, { valor: efectiva });
   return h(id, 'correcto', 'baja', 3, { valor: efectiva });

@@ -30,6 +30,8 @@ export interface TextoHallazgo {
 
 const num = (d: Datos, k: string): number | null => (typeof d[k] === 'number' ? (d[k] as number) : null);
 const txt = (d: Datos, k: string): string | null => (typeof d[k] === 'string' ? (d[k] as string) : null);
+/** El «valor» que dijo la web, con «…» al final si se recortó por ser larguísimo (el recorte nunca es silencioso). */
+const valorMostrado = (d: Datos): string => `${txt(d, 'valor') ?? ''}${d['recortado'] === true ? '…' : ''}`;
 
 /** «Falta la marca en: sesion, preferencias y 2 más», a partir de los datos del hallazgo. */
 function listaCookies(d: Datos): string {
@@ -37,10 +39,12 @@ function listaCookies(d: Datos): string {
   const mas = num(d, 'mas') ?? 0;
   if (nombres.length === 0) return 'Alguna cookie';
   const base = nombres.map((n) => `«${n}»`);
-  const texto = base.length === 1 ? base[0] : `${base.slice(0, -1).join(', ')} y ${base[base.length - 1]}`;
-  const extra = mas > 0 ? ` y ${mas} más` : '';
-  return nombres.length === 1 && mas === 0 ? `La cookie ${texto}` : `Las cookies ${texto}${extra}`;
+  const texto = mas > 0 ? `${base.join(', ')} y ${mas} más` : base.length === 1 ? base[0] : `${base.slice(0, -1).join(', ')} y ${base[base.length - 1]}`;
+  return nombres.length === 1 && mas === 0 ? `La cookie ${texto}` : `Las cookies ${texto}`;
 }
+
+/** ¿Son varias cookies? Para concordar el verbo («no lleva» / «no llevan»). */
+const variasCookies = (d: Datos): boolean => (Array.isArray(d['sin']) ? (d['sin'] as string[]).length : 0) + (num(d, 'mas') ?? 0) > 1;
 
 /** «Google Analytics, Hotjar y 2 más», a partir de los datos del hallazgo. */
 function listaNombres(d: Datos): string {
@@ -53,6 +57,10 @@ function listaNombres(d: Datos): string {
 
 const fechaLarga = (iso: string) => new Date(`${iso}T12:00:00Z`).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
 
+/** «TLSv1.3» → «TLS 1.3»; «SSLv3» → «SSL 3»; lo que no se reconoce, tal cual. */
+const nombreTls = (protocolo: string | null): string | null =>
+  protocolo === null ? null : protocolo.replace(/^TLSv(\d)/, 'TLS $1').replace(/^SSLv(\d)/, 'SSL $1');
+
 const dias = (n: number) => (n === 1 ? '1 día' : `${n} días`);
 const segundosADias = (s: number) => Math.round(s / 86_400);
 
@@ -60,7 +68,7 @@ const MOTIVOS_CERTIFICADO: Record<string, string> = {
   caducado: 'El certificado de seguridad ha caducado. Los navegadores muestran una pantalla roja de aviso y la mayoría de la gente se marcha.',
   autofirmado: 'El certificado lo ha firmado la propia web, no una entidad de confianza. Los navegadores muestran una pantalla roja de aviso.',
   'nombre-no-coincide': 'El certificado está emitido para otra dirección distinta de esta. Los navegadores avisan de que la conexión no es privada.',
-  'cadena-incompleta': 'Al certificado le falta una pieza intermedia en el servidor. Algunos navegadores y móviles lo rechazan aunque otros lo acepten.',
+  'cadena-incompleta': 'Al certificado le falta una pieza intermedia en el servidor (o su emisor no es uno de los reconocidos). Muchos navegadores de escritorio la completan solos, pero algunos móviles, programas y servicios de correo lo rechazan.',
   'aun-no-valido': 'El certificado todavía no ha entrado en vigor. Suele deberse a un reloj mal configurado en el servidor.',
   revocado: 'El certificado fue anulado por la entidad que lo emitió, así que los navegadores no lo aceptan.',
   otro: 'El navegador no se fía del certificado de seguridad y avisa a los visitantes de que la conexión no es privada.',
@@ -95,8 +103,8 @@ export const TEXTOS: Record<string, TextoHallazgo> = {
   },
   'https.tls.version': {
     titulo: 'La conexión usa un cifrado moderno',
-    correcto: (d) => `Se negoció ${txt(d, 'protocolo') ?? 'una versión moderna'} de TLS, una versión actual del cifrado.`,
-    fallo: (d) => `El servidor acepta ${txt(d, 'protocolo') ?? 'una versión antigua'} de TLS, un cifrado antiguo con debilidades conocidas. Los navegadores actuales ya lo rechazan.`,
+    correcto: (d) => `Se negoció ${nombreTls(txt(d, 'protocolo')) ?? 'una versión moderna de TLS'}, una versión actual del cifrado.`,
+    fallo: (d) => `El servidor acepta ${nombreTls(txt(d, 'protocolo')) ?? 'una versión antigua de TLS'}, un cifrado antiguo con debilidades conocidas. Los navegadores actuales ya lo rechazan.`,
     noAplica: 'No se ha podido comprobar la versión del cifrado.',
     arreglo: 'Pide a tu proveedor que desactive TLS 1.0 y 1.1 y deje solo TLS 1.2 y 1.3. Si está en un alojamiento compartido, suele bastar con abrir una incidencia.',
   },
@@ -104,7 +112,9 @@ export const TEXTOS: Record<string, TextoHallazgo> = {
     titulo: 'Quien escribe «http://» acaba en la versión segura',
     correcto: 'Si alguien entra por la dirección sin cifrar, es llevado automáticamente a la versión cifrada y de forma permanente.',
     mejorable: (d) =>
-      d['permanente'] === false
+      txt(d, 'otroDominio') !== null
+        ? `Quien entra sin cifrar acaba en la versión segura, pero de otro dominio (${txt(d, 'otroDominio')}). Las protecciones de tu dominio original (como HSTS) no llegan a funcionar mientras tanto.`
+        : d['permanente'] === false
         ? 'Quien entra sin cifrar es llevado a la versión segura, pero con una redirección temporal. Es mejor que sea permanente para que los navegadores y Google lo recuerden.'
         : 'No se ha podido comprobar a dónde lleva la dirección sin cifrar. Si nadie responde ahí, quien escriba «http://» no llegará a tu web.',
     fallo: (d) =>
@@ -183,7 +193,9 @@ export const TEXTOS: Record<string, TextoHallazgo> = {
     mejorable: (d) =>
       d['ausente'] === true
         ? 'No lo has configurado, y cada navegador decide por su cuenta. Mejor fijar tú qué información se comparte.'
-        : 'La política actual comparte más información de la necesaria con otras webs.',
+        : d['desconocida'] === true
+          ? 'El valor que has puesto no lo reconoce ningún navegador, así que es como no tener la cabecera: cada navegador decide por su cuenta.'
+          : 'La política actual comparte más información de la necesaria con otras webs.',
     fallo: 'Se envía la dirección completa (con parámetros) a cualquier web a la que se enlaza, aunque contenga datos privados.',
     arreglo: 'Añade la cabecera Referrer-Policy con un valor prudente.',
     codigo: 'Referrer-Policy: strict-origin-when-cross-origin',
@@ -307,7 +319,7 @@ export const TEXTOS: Record<string, TextoHallazgo> = {
   'cookies.secure': {
     titulo: 'Las cookies solo viajan por conexión cifrada',
     correcto: (d) => `Las cookies que guarda tu web (${num(d, 'total') ?? 0}) llevan la marca «Secure»: el navegador nunca las envía sin cifrar.`,
-    fallo: (d) => `${listaCookies(d)} no lleva la marca «Secure». Si alguien visita una página sin cifrar, el navegador las envía a la vista de cualquiera en la misma red.`,
+    fallo: (d) => `${listaCookies(d)} ${variasCookies(d) ? 'no llevan' : 'no lleva'} la marca «Secure». Si alguien visita una página sin cifrar, el navegador las envía a la vista de cualquiera en la misma red.`,
     noAplica: 'No hay cookies que valorar.',
     arreglo: 'Añade «Secure» a todas las cookies. En el código de tu web suele ser una opción al crear la cookie; en WordPress y otros gestores, un ajuste o un plugin de seguridad.',
     codigo: 'Set-Cookie: sesion=...; Secure; HttpOnly; SameSite=Lax',
@@ -315,7 +327,7 @@ export const TEXTOS: Record<string, TextoHallazgo> = {
   'cookies.httponly': {
     titulo: 'Las cookies de sesión no las puede leer un script',
     correcto: 'Las cookies que identifican a un usuario llevan «HttpOnly»: ningún script de la página puede leerlas, ni siquiera uno malicioso.',
-    fallo: (d) => `${listaCookies(d)} parece una cookie de sesión y no lleva «HttpOnly». Si alguien consigue ejecutar un script en tu web, puede robar la sesión del usuario.`,
+    fallo: (d) => `${listaCookies(d)} ${variasCookies(d) ? 'parecen cookies de sesión y no llevan' : 'parece una cookie de sesión y no lleva'} «HttpOnly». Si alguien consigue ejecutar un script en tu web, puede robar la sesión del usuario.`,
     noAplica: 'No hay cookies de sesión que valorar.',
     arreglo: 'Añade «HttpOnly» a las cookies de sesión y de acceso. Solo deben quedarse sin él las que tu propio JavaScript necesite leer.',
     codigo: 'Set-Cookie: sesion=...; Secure; HttpOnly; SameSite=Lax',
@@ -323,7 +335,7 @@ export const TEXTOS: Record<string, TextoHallazgo> = {
   'cookies.samesite': {
     titulo: 'Las cookies indican cuándo pueden enviarse desde otras webs',
     correcto: 'Las cookies declaran su política «SameSite», lo que ayuda a frenar los engaños en los que otra web hace peticiones en nombre del usuario.',
-    mejorable: (d) => `${listaCookies(d)} no declara «SameSite». Los navegadores modernos aplican «Lax» por su cuenta, pero es mejor decirlo tú.`,
+    mejorable: (d) => `${listaCookies(d)} ${variasCookies(d) ? 'no declaran' : 'no declara'} «SameSite». Los navegadores modernos aplican «Lax» por su cuenta, pero es mejor decirlo tú.`,
     noAplica: 'No hay cookies que valorar.',
     arreglo: 'Añade «SameSite=Lax» (o «Strict» si tu web lo permite) a las cookies.',
     codigo: 'Set-Cookie: sesion=...; Secure; HttpOnly; SameSite=Lax',
@@ -432,14 +444,14 @@ export const TEXTOS: Record<string, TextoHallazgo> = {
   'tecnologias.servidor': {
     titulo: 'El servidor no cuenta su versión exacta',
     correcto: 'El servidor no revela qué programa y qué versión usa.',
-    mejorable: (d) => `El servidor se presenta como «${txt(d, 'valor') ?? ''}». Con esa versión exacta, quien busque fallos conocidos sabe cuáles probar.`,
+    mejorable: (d) => `El servidor se presenta como «${valorMostrado(d)}». Con esa versión exacta, quien busque fallos conocidos sabe cuáles probar.`,
     arreglo: 'Pide a tu proveedor que oculte la versión en la cabecera «Server». En nginx es «server_tokens off»; en Apache, «ServerTokens Prod».',
     codigo: 'nginx:  server_tokens off;\nApache: ServerTokens Prod',
   },
   'tecnologias.cabecera': {
     titulo: 'La web no anuncia con qué está hecha',
     correcto: 'Las cabeceras no anuncian la tecnología ni la versión con las que está hecha tu web.',
-    mejorable: (d) => `La cabecera «${txt(d, 'cabecera') ?? 'X-Powered-By'}» dice «${txt(d, 'valor') ?? ''}». Es un rótulo que facilita buscar fallos concretos de esa versión.`,
+    mejorable: (d) => `La cabecera «${txt(d, 'cabecera') ?? 'X-Powered-By'}» dice «${valorMostrado(d)}». Es un rótulo que facilita buscar fallos concretos de esa versión.`,
     arreglo: 'Quita esa cabecera. En PHP es «expose_php = Off»; en Express (Node), «app.disable("x-powered-by")»; en ASP.NET, quitarla del archivo de configuración. Tu proveedor puede hacerlo.',
     codigo: 'PHP (php.ini): expose_php = Off',
   },
@@ -458,7 +470,7 @@ export const TEXTOS: Record<string, TextoHallazgo> = {
   'tecnologias.generador': {
     titulo: 'La página no anuncia el gestor ni su versión',
     correcto: 'El código de la página no anuncia qué gestor de contenidos ni qué versión usas.',
-    mejorable: (d) => `La página anuncia «${txt(d, 'valor') ?? ''}» en su código. Quien busque webs con una versión vulnerable la encuentra a la primera.`,
+    mejorable: (d) => `La página anuncia «${valorMostrado(d)}» en su código. Quien busque webs con una versión vulnerable la encuentra a la primera.`,
     noAplica: 'No se ha podido leer el código de la página.',
     arreglo: 'Quita la etiqueta «generator» (en WordPress, con un plugin de seguridad o una línea en el tema) y, sobre todo, mantén el gestor actualizado.',
   },
@@ -522,7 +534,7 @@ export const GRAVEDAD: Record<Gravedad, string> = {
 };
 
 export const VEREDICTO: Record<Letra, { titulo: string; texto: string }> = {
-  'A+': { titulo: 'Excelente', texto: 'Tu web cumple todo lo que hemos comprobado. Es de las mejor protegidas.' },
+  'A+': { titulo: 'Excelente', texto: 'Tu web supera con nota casi todo lo que hemos comprobado. Es de las mejor protegidas.' },
   A: { titulo: 'Muy bien', texto: 'Tu web está bien protegida. Quedan detalles menores por pulir.' },
   B: { titulo: 'Bien, con margen', texto: 'La base es sólida, pero hay protecciones que faltan y conviene añadirlas.' },
   C: { titulo: 'Mejorable', texto: 'Tu web tiene lo básico, pero le faltan defensas importantes.' },
@@ -538,7 +550,10 @@ export function textoDeTecho(id: string, letra: Letra): string {
 const AVISOS: Record<string, (d: Datos) => string> = {
   'redireccion.otro-host': (d) =>
     `Tu dirección te lleva a otra: ${txt(d, 'desde') ?? ''} redirige a ${txt(d, 'hasta') ?? ''}. Lo que ves aquí es el análisis de la web de destino.`,
-  'cuerpo.recortado': () => 'La página era muy grande y solo hemos leído el principio. No afecta a las comprobaciones de esta versión.',
+  'respuesta.error': (d) =>
+    `La web respondió con un error (código ${num(d, 'estado') ?? ''}) en lugar de su página. Puede ser un bloqueo a los analizadores o una caída puntual: las cabeceras y cookies de esa respuesta pueden no ser las de tu web real. Prueba otra vez más tarde.`,
+  'cuerpo.recortado': () =>
+    'La página era muy grande y solo hemos leído el principio. Las comprobaciones que necesitan la página entera (enlaces del pie, scripts del final…) figuran como «no aplica» en lugar de dar una nota que no podemos sostener.',
   'cuerpo.interrumpido': () => 'La web dejó de responder mientras la leíamos. El resultado se basa en lo recibido hasta ese momento.',
 };
 
@@ -561,7 +576,7 @@ export const ERRORES_OBJETIVO: Record<MotivoObjetivo, string> = {
 
 export const ERRORES_ANALISIS: Record<string, { titulo: string; texto: string }> = {
   'no-existe': { titulo: 'No encontramos esa web', texto: 'El nombre no existe o todavía no apunta a ningún servidor. Revisa que esté bien escrito.' },
-  'sin-respuesta': { titulo: 'La web no responde', texto: 'No hemos podido conectar. Puede estar caída, bloquear a los analizadores o no aceptar conexiones desde fuera. No ponemos nota cuando no podemos ver la web.' },
+  'sin-respuesta': { titulo: 'La web no responde', texto: 'No hemos podido ver la web con claridad: puede estar caída, ser muy lenta, redirigir en bucle, bloquear a los analizadores o no aceptar conexiones desde fuera. No ponemos nota cuando no podemos verla bien; prueba de nuevo en unos minutos.' },
   'destino-no-permitido': { titulo: 'No podemos revisar esa dirección', texto: 'Apunta a una red privada o reservada. Solo analizamos webs públicas de internet.' },
 };
 

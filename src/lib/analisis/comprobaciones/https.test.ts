@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Hallazgo, InfoTls } from '../tipos';
 import { AHORA, HTTP_REDIRIGE, bien, mal, respuesta, sitio, tls } from '../pruebas/construir';
-import { analizarHsts, clasificarErrorCertificado, comprobarHttps } from './https';
+import { analizarHsts, clasificarErrorCertificado, comprobarHttps, umbralesDeCaducidad } from './https';
 
 const hallazgo = (hallazgos: Hallazgo[], id: string): Hallazgo => {
   const encontrado = hallazgos.find((x) => x.id === id);
@@ -59,8 +59,8 @@ describe('comprobarHttps · certificado', () => {
     ['DEPTH_ZERO_SELF_SIGNED_CERT', 'autofirmado', 'F'],
     ['SELF_SIGNED_CERT_IN_CHAIN', 'autofirmado', 'F'],
     ['ERR_TLS_CERT_ALTNAME_INVALID', 'nombre-no-coincide', 'F'],
-    ['UNABLE_TO_VERIFY_LEAF_SIGNATURE', 'cadena-incompleta', 'F'],
-    ['UNABLE_TO_GET_ISSUER_CERT_LOCALLY', 'cadena-incompleta', 'F'],
+    ['UNABLE_TO_VERIFY_LEAF_SIGNATURE', 'cadena-incompleta', 'C'],
+    ['UNABLE_TO_GET_ISSUER_CERT_LOCALLY', 'cadena-incompleta', 'C'],
     ['CERT_NOT_YET_VALID', 'aun-no-valido', 'F'],
     ['CERT_REVOKED', 'revocado', 'F'],
     ['LO_QUE_SEA', 'otro', 'F'],
@@ -115,6 +115,30 @@ describe('comprobarHttps · caducidad próxima', () => {
   });
 });
 
+describe('caducidad según la duración del certificado', () => {
+  const vida = (dias: number) => ({ validoDesde: new Date(AHORA.getTime() - 1000).toISOString(), validoHasta: new Date(AHORA.getTime() - 1000 + dias * DIA).toISOString() });
+  it.each([
+    [90, 14, 29],
+    [200, 14, 29],
+    [45, 7, 15],
+    [6, 1, 2],
+  ])('un certificado de %i días avisa a %i (fallo) y %i (mejorable)', (dias, fallo, mejorable) => {
+    expect(umbralesDeCaducidad(vida(dias))).toEqual({ fallo, mejorable });
+  });
+  it('sin fechas válidas, los umbrales de siempre', () => {
+    expect(umbralesDeCaducidad(undefined)).toEqual({ fallo: 14, mejorable: 29 });
+    expect(umbralesDeCaducidad({ validoDesde: null, validoHasta: null })).toEqual({ fallo: 14, mejorable: 29 });
+    expect(umbralesDeCaducidad({ validoDesde: 'x', validoHasta: 'y' })).toEqual({ fallo: 14, mejorable: 29 });
+    expect(umbralesDeCaducidad({ validoDesde: '2026-02-01T00:00:00Z', validoHasta: '2026-01-01T00:00:00Z' })).toEqual({ fallo: 14, mejorable: 29 });
+  });
+  it('un certificado de 6 días recién renovado (5 días de margen) no se da por «a punto de caducar»... pero a 1 día sí', () => {
+    const recien = tls({ ...vida(6), validoHasta: new Date(AHORA.getTime() + 5 * DIA).toISOString() });
+    expect(hallazgo(comprobarHttps(conCertificados(['ejemplo.com', recien]), AHORA), 'https.certificado.caducidad').resultado).toBe('correcto');
+    const casi = tls({ validoDesde: vida(6).validoDesde, validoHasta: new Date(AHORA.getTime() + 0.5 * DIA).toISOString() });
+    expect(hallazgo(comprobarHttps(conCertificados(['ejemplo.com', casi]), AHORA), 'https.certificado.caducidad').resultado).toBe('fallo');
+  });
+});
+
 describe('comprobarHttps · versión de TLS', () => {
   it.each([
     ['TLSv1.3', 'correcto'],
@@ -149,6 +173,12 @@ describe('comprobarHttps · de HTTP a HTTPS', () => {
     for (const estado of [302, 303, 307]) {
       expect(conHttp(redirige(estado, 'https://ejemplo.com/'))).toMatchObject({ resultado: 'mejorable', datos: { estado, permanente: false } });
     }
+  });
+
+  it('a https pero de otro dominio es mejorable (el dominio de origen queda sin HSTS); al mismo dominio, con o sin www, es correcto', () => {
+    expect(conHttp(redirige(301, 'https://www.ejemplo.com/'))).toMatchObject({ resultado: 'correcto' });
+    expect(conHttp(redirige(301, 'https://otro-dominio.com/'))).toMatchObject({ resultado: 'mejorable', datos: { otroDominio: 'otro-dominio.com' } });
+    expect(conHttp(redirige(301, 'https://ejemplo.com.falso.net/'))).toMatchObject({ resultado: 'mejorable' });
   });
 
   it('una redirección que sigue en http, o sin destino, es un fallo', () => {

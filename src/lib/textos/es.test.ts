@@ -91,3 +91,38 @@ describe('textos en español', () => {
     for (const h of r.informe.hallazgos) expect(TEXTOS[h.id], h.id).toBeDefined();
   });
 });
+
+describe('redacción: concordancia y recortes visibles', () => {
+  const dice = (id: string, resultado: Resultado, datos: Record<string, string | number | boolean | string[]>) => textoDeHallazgo({ id, resultado, datos }).explicacion;
+
+  it('una cookie en singular, varias en plural, y más de cinco con «y N más»', () => {
+    expect(dice('cookies.secure', 'fallo', { sin: ['a'] })).toMatch(/^La cookie «a» no lleva la marca/);
+    expect(dice('cookies.secure', 'fallo', { sin: ['a', 'b'] })).toMatch(/^Las cookies «a» y «b» no llevan la marca/);
+    expect(dice('cookies.secure', 'fallo', { sin: ['a', 'b', 'c', 'd', 'e'], mas: 2 })).toMatch(/^Las cookies «a», «b», «c», «d», «e» y 2 más no llevan/);
+    expect(dice('cookies.httponly', 'fallo', { sin: ['a', 'b'] })).toMatch(/parecen cookies de sesión y no llevan/);
+    expect(dice('cookies.httponly', 'fallo', { sin: ['a'] })).toMatch(/parece una cookie de sesión y no lleva/);
+    expect(dice('cookies.samesite', 'mejorable', { sin: ['a', 'b'] })).toMatch(/no declaran/);
+    expect(dice('cookies.samesite', 'mejorable', { sin: ['a'] })).toMatch(/no declara «SameSite»/);
+  });
+
+  it('TLS se escribe «TLS 1.3», sin repetir', () => {
+    expect(dice('https.tls.version', 'correcto', { protocolo: 'TLSv1.3' })).toMatch(/^Se negoció TLS 1\.3, una versión actual/);
+    expect(dice('https.tls.version', 'fallo', { protocolo: 'TLSv1' })).toMatch(/^El servidor acepta TLS 1,/);
+    expect(dice('https.tls.version', 'fallo', { protocolo: 'SSLv3' })).toMatch(/SSL 3/);
+  });
+
+  it('un valor recortado por ser larguísimo acaba en «…»', () => {
+    expect(dice('tecnologias.servidor', 'mejorable', { valor: 'nginx/1.18.0', recortado: true })).toContain('«nginx/1.18.0…»');
+    expect(dice('tecnologias.servidor', 'mejorable', { valor: 'nginx/1.18.0' })).toContain('«nginx/1.18.0»');
+    expect(dice('tecnologias.cabecera', 'mejorable', { cabecera: 'x-powered-by', valor: 'PHP/7.4', recortado: true })).toContain('«PHP/7.4…»');
+    expect(dice('tecnologias.generador', 'mejorable', { valor: 'WordPress 5.8.1', recortado: true })).toContain('«WordPress 5.8.1…»');
+  });
+
+  it('una política de Referrer desconocida no dice que comparta de más', () => {
+    expect(dice('cabeceras.referrer', 'mejorable', { desconocida: true })).toMatch(/no lo reconoce ningún navegador/);
+  });
+
+  it('una redirección a otro dominio nombra el dominio', () => {
+    expect(dice('https.redireccion.http', 'mejorable', { estado: 301, otroDominio: 'otra.com' })).toContain('otra.com');
+  });
+});

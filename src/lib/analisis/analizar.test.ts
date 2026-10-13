@@ -149,6 +149,30 @@ describe('analizarSitio · cuando no hay nota que dar', () => {
     expect(await analizar('ejemplo.com', mal('conexion'), mal('conexion'))).toMatchObject({ ok: false, error: { codigo: 'sin-respuesta' } });
     expect(await analizar('ejemplo.com', mal('tiempo-agotado'), mal('tiempo-agotado'))).toMatchObject({ ok: false, error: { codigo: 'sin-respuesta' } });
   });
+
+  it.each(['tiempo-agotado', 'redirecciones', 'respuesta-invalida'] as const)(
+    'si HTTPS falla por «%s» pero HTTP responde, no se pone una «F»: no demuestra que no haya HTTPS',
+    async (codigo) => {
+      expect(await analizar('ejemplo.com', mal(codigo), HTTP_REDIRIGE)).toMatchObject({ ok: false, error: { codigo: 'sin-respuesta' } });
+    },
+  );
+
+  it('si HTTPS rechaza la conexión y HTTP responde, sí es una «F» (no hay HTTPS)', async () => {
+    const r = await analizar('ejemplo.com', mal('conexion'), HTTP_REDIRIGE);
+    expect(r).toMatchObject({ ok: true, informe: { nota: { letra: 'F' } } });
+  });
+
+  it.each([403, 429, 503])('una respuesta %i lleva un aviso: no es la web real', async (estado) => {
+    const r = await analizar('ejemplo.com', bien(respuesta({ estado })));
+    expect(r.ok && r.informe.avisos).toContainEqual({ id: 'respuesta.error', datos: { estado } });
+  });
+
+  it('una respuesta 200 o 301 no lleva ese aviso', async () => {
+    for (const estado of [200, 301, 399]) {
+      const r = await analizar('ejemplo.com', bien(respuesta({ estado })));
+      expect(r.ok && r.informe.avisos.some((a) => a.id === 'respuesta.error')).toBe(false);
+    }
+  });
 });
 
 describe('analizarSitio · progreso', () => {

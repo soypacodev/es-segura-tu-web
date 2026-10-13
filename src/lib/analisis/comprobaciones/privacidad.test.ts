@@ -131,3 +131,28 @@ describe('comprobarPrivacidad', () => {
     expect(hs.every((x) => x.resultado === 'no-aplica')).toBe(true);
   });
 });
+
+describe('los rastreadores se buscan en lo que la página carga, no en lo que dice', () => {
+  const pagina = (cuerpo: string) => `<html><body>${cuerpo}</body></html>`;
+  it.each([
+    ['un enlace a su web', '<a href="https://segment.com/pricing">Segment</a>'],
+    ['texto visible', '<p>Medimos con mixpanel.com y hotjar.com</p>'],
+    ['un comentario', '<!-- <script src="https://static.hotjar.com/c.js"></script> -->'],
+    ['un enlace con su dominio en el texto', '<a href="/blog">Por qué dejamos google-analytics.com</a>'],
+    ['una cadena dentro de un textarea', '<textarea>https://connect.facebook.net/x.js</textarea>'],
+  ])('no cuenta %s', (_n, cuerpo) => expect(rastreadoresEnHtml(pagina(cuerpo))).toEqual([]));
+
+  it.each([
+    ['un script con src', '<script src="https://static.hotjar.com/c.js"></script>', 'Hotjar'],
+    ['un fragmento escrito en la página (como el de Tag Manager)', "<script>(function(w,d,s,l,i){j.src='https://www.googletagmanager.com/gtm.js?id='+i;})(window,document,'script','dataLayer','GTM-X');</script>", 'Google Tag Manager'],
+    ['una imagen de seguimiento', '<noscript><img src="https://www.google-analytics.com/collect?v=1"></noscript>', 'Google Analytics'],
+    ['un marco', '<iframe src="https://www.googletagmanager.com/ns.html?id=GTM-X"></iframe>', 'Google Tag Manager'],
+  ])('sí cuenta %s', (_n, cuerpo, nombre) => expect(rastreadoresEnHtml(pagina(cuerpo))).toContain(nombre));
+
+  it('las tipografías de Google se ven en un link o en un @import, no en el texto', () => {
+    expect(usaFuentesDeGoogle(pagina('<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter">'))).toBe(true);
+    expect(usaFuentesDeGoogle(pagina('<style>@import url("https://fonts.gstatic.com/x.woff2");</style>'))).toBe(true);
+    expect(usaFuentesDeGoogle(pagina('<p>Usamos fonts.googleapis.com</p>'))).toBe(false);
+    expect(usaFuentesDeGoogle(pagina('<a href="https://fonts.googleapis.com">Google Fonts</a>'))).toBe(false);
+  });
+});

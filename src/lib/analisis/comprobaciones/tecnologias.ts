@@ -5,17 +5,10 @@
 // sí misma, se diga o no. Solo se mira lo que la web declara: no se adivina.
 
 import type { CapturaSitio, Hallazgo, RespuestaCapturada } from '../tipos';
-import { etiquetasDe } from './html';
-import { valorCabecera } from './utiles';
+import { etiquetasDe, type EstadoLectura } from './html';
+import { hallazgoDe, valorCabecera } from './utiles';
 
-const h = (id: string, resultado: Hallazgo['resultado'], gravedad: Hallazgo['gravedad'], peso: number, datos?: Hallazgo['datos']): Hallazgo => ({
-  id,
-  categoria: 'tecnologias',
-  resultado,
-  gravedad,
-  peso,
-  ...(datos ? { datos } : {}),
-});
+const h = hallazgoDe('tecnologias');
 
 const MAX_VALOR = 120;
 
@@ -41,7 +34,7 @@ const VERSION_SUELTA = /\b\d+\.\d+(\.\d+)?\b/;
  */
 export const FIN_DE_VIDA_PHP: Readonly<Record<string, string>> = {
   '5.6': '2018-12-31',
-  '7.0': '2019-01-10',
+  '7.0': '2018-12-03',
   '7.1': '2019-12-01',
   '7.2': '2020-11-30',
   '7.3': '2021-12-06',
@@ -54,7 +47,7 @@ export const FIN_DE_VIDA_PHP: Readonly<Record<string, string>> = {
   '8.5': '2029-12-31',
 };
 
-/** Rama más antigua de PHP 8 de la que todavía no hay noticia: por encima de la última conocida, se da por vigente. */
+/** La versión que anuncia una cabecera («PHP/7.4.3» → versión «7.4.3», rama «7.4»), o null si no anuncia PHP. */
 export function versionDePhp(valor: string): { version: string; rama: string } | null {
   const m = /\bPHP\/(\d+)\.(\d+)(?:\.(\d+))?/i.exec(valor);
   if (!m) return null;
@@ -69,9 +62,9 @@ function comprobarPhp(r: RespuestaCapturada, ahora: Date): Hallazgo {
 
   const fin = FIN_DE_VIDA_PHP[php.rama];
   if (fin === undefined) {
-    const [mayor, menor] = php.rama.split('.').map(Number);
-    // Ramas antiguas que no están en la lista: caducadas. Las posteriores a la última conocida: vigentes.
-    const antigua = mayor < 8 || (mayor === 8 && menor < 5);
+    // Una rama que no está en la lista y es anterior a PHP 8 (la 4.x, la 5.0…) está caducada. Las posteriores a la
+    // última que conocemos se dan por vigentes: más vale no acusar a quien usa una versión que no conocemos.
+    const antigua = Number(php.rama.split('.')[0]) < 8;
     return antigua ? h(id, 'fallo', 'alta', 8, { version: php.version, rama: php.rama }) : h(id, 'correcto', 'alta', 8, { version: php.version });
   }
   return Date.parse(`${fin}T23:59:59Z`) < ahora.getTime()
@@ -124,7 +117,8 @@ function comprobarGenerador(r: RespuestaCapturada): Hallazgo {
   if (r.cuerpo === null) return h(id, 'no-aplica', 'baja', 2);
   const valor = generadorDeLaPagina(r.cuerpo);
   if (valor !== null && VERSION_SUELTA.test(valor)) return h(id, 'mejorable', 'baja', 2, mostrar(valor));
-  return h(id, 'correcto', 'baja', 2);
+  // Si la página se cortó, la etiqueta podría estar en la parte que no se leyó.
+  return r.estadoCuerpo === 'completo' ? h(id, 'correcto', 'baja', 2) : h(id, 'no-aplica', 'baja', 2);
 }
 
 // ------------------------------------------------------------------
@@ -143,7 +137,7 @@ interface Libreria {
   nombre: string;
   /** Nombre en la dirección (jquery-3.3.1.js, /jquery/3.3.1/, jquery@3.3.1). */
   patron: RegExp;
-  /** Para jQuery de WordPress: «jquery.min.js?ver=3.6.0». */
+  /** Para jQuery de WordPress: «jquery.min.js?ver=3.6.0» (solo «ver», y con tres cifras: «?v=1.2» suele ser un simple número de caché). */
   porParametro?: RegExp;
   /** ¿Esta versión tiene fallos publicados o ya no recibe parches? */
   obsoleta: (v: Version) => boolean;
@@ -158,7 +152,7 @@ export const LIBRERIAS: readonly Libreria[] = [
   // Bootstrap < 3.4.1 y 4.x < 4.3.1: XSS en tooltips y popovers (CVE-2019-8331).
   { nombre: 'Bootstrap', patron: new RegExp(String.raw`(?:^|[/_.-])bootstrap${SEPARADOR}${NUMERO}`, 'i'), obsoleta: (v) => v[0] < 3 || (v[0] === 3 && (v[1] < 4 || (v[1] === 4 && v[2] < 1))) || (v[0] === 4 && (v[1] < 3 || (v[1] === 3 && v[2] < 1))) },
   // AngularJS (1.x): sin soporte desde el 31 de diciembre de 2021.
-  { nombre: 'AngularJS', patron: new RegExp(String.raw`(?:^|[/_.-])angular(?:js)?${SEPARADOR}${NUMERO}`, 'i'), obsoleta: (v) => v[0] === 1 },
+  { nombre: 'AngularJS', patron: new RegExp(String.raw`(?:^|[/_.-])angular(?:\.?js)?${SEPARADOR}${NUMERO}`, 'i'), obsoleta: (v) => v[0] === 1 },
 ];
 
 function aVersion(texto: string): Version {
@@ -177,7 +171,8 @@ export function leerLibrerias(html: string): { vistas: LibreriaVista[]; completo
   const vistas = new Map<string, LibreriaVista>();
   let revisadas = 0;
   let completo = true;
-  for (const e of etiquetasDe(html, SCRIPTS_Y_ESTILOS)) {
+  const lectura: EstadoLectura = { incompleto: false };
+  for (const e of etiquetasDe(html, SCRIPTS_Y_ESTILOS, lectura)) {
     const direccion = e.nombre === 'script' ? e.atributos['src'] : e.atributos['href'];
     if (!direccion) continue;
     if (++revisadas > MAX_SCRIPTS) {
@@ -188,26 +183,27 @@ export function leerLibrerias(html: string): { vistas: LibreriaVista[]; completo
     const ruta = url.split(/[?#]/)[0];
     for (const lib of LIBRERIAS) {
       let version = lib.patron.exec(ruta)?.[1];
-      if (version === undefined && lib.porParametro?.test(ruta)) version = /[?&](?:ver|v)=(\d+\.\d+(?:\.\d+)?)/i.exec(url)?.[1];
+      if (version === undefined && lib.porParametro?.test(ruta)) version = /[?&]ver=(\d+\.\d+\.\d+)/i.exec(url)?.[1];
       if (version === undefined) continue;
       const clave = `${lib.nombre} ${version}`;
       if (!vistas.has(clave)) vistas.set(clave, { nombre: lib.nombre, version, obsoleta: lib.obsoleta(aVersion(version)) });
     }
   }
-  return { vistas: [...vistas.values()], completo };
+  return { vistas: [...vistas.values()], completo: completo && !lectura.incompleto };
 }
 
 function comprobarLibrerias(r: RespuestaCapturada): Hallazgo {
   const id = 'tecnologias.librerias';
   if (r.cuerpo === null) return h(id, 'no-aplica', 'alta', 6);
-  const { vistas } = leerLibrerias(r.cuerpo);
+  const { vistas, completo } = leerLibrerias(r.cuerpo);
   const malas = vistas.filter((v) => v.obsoleta);
   if (malas.length > 0) {
     const lista = malas.slice(0, MAX_LIBRERIAS).map((v) => `${v.nombre} ${v.version}`);
     return h(id, 'fallo', 'alta', 6, { lista, ...(malas.length > MAX_LIBRERIAS ? { mas: malas.length - MAX_LIBRERIAS } : {}) });
   }
-  // Sin ninguna librería reconocida no se puede decir nada: no es un «todo bien».
-  return vistas.length === 0 ? h(id, 'no-aplica', 'alta', 6) : h(id, 'correcto', 'alta', 6, { total: vistas.length });
+  // Sin ninguna librería reconocida no se puede decir nada: no es un «todo bien». Y si la página no se
+  // leyó entera, lo que no se vio podría ser peor que lo que sí.
+  return vistas.length === 0 || !completo || r.estadoCuerpo !== 'completo' ? h(id, 'no-aplica', 'alta', 6) : h(id, 'correcto', 'alta', 6, { total: vistas.length });
 }
 
 // ------------------------------------------------------------------

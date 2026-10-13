@@ -123,6 +123,12 @@ describe('comprobarCabeceras · clickjacking', () => {
     [{ 'x-frame-options': [' SAMEORIGIN '] }, 'correcto'],
     [{ 'x-frame-options': ['ALLOW-FROM https://otra.com'] }, 'mejorable'],
     [{ 'x-frame-options': ['TALVEZ'] }, 'fallo'],
+    [{ 'x-frame-options': ['DENY, DENY'] }, 'correcto'], // repetida por un proxy
+    [{ 'x-frame-options': ['DENY, SAMEORIGIN'] }, 'fallo'], // contradictoria: el navegador la ignora
+    [{ 'content-security-policy': ['frame-ancestors https:'] }, 'fallo'], // cualquier web https puede incrustarla
+    [{ 'content-security-policy': ['frame-ancestors http: https:'] }, 'fallo'],
+    [{ 'content-security-policy': ['frame-ancestors https://*'] }, 'fallo'],
+    [{ 'content-security-policy': ["frame-ancestors 'self' https://*.socio.com"] }, 'correcto'],
     [{ 'content-security-policy': ["frame-ancestors 'none'"] }, 'correcto'],
     [{ 'content-security-policy': ["default-src 'self'; frame-ancestors 'self' https://socio.com"] }, 'correcto'],
     [{ 'content-security-policy': ['frame-ancestors *'] }, 'fallo'],
@@ -158,8 +164,13 @@ describe('comprobarCabeceras · nosniff, referrer y permisos', () => {
     ['unsafe-url', 'fallo'],
     ['no-referrer-when-downgrade', 'mejorable'],
     ['basura', 'mejorable'],
+    ['', 'mejorable'],
   ] as const)('referrer-policy %j → %s', (valor, esperado) => {
     expect(evaluar('cabeceras.referrer', { 'referrer-policy': valor ? [valor] : undefined }).resultado).toBe(esperado);
+  });
+
+  it('un valor que ningún navegador reconoce se anota como desconocido, no como una política concreta', () => {
+    expect(evaluar('cabeceras.referrer', { 'referrer-policy': ['basura'] }).datos).toEqual({ desconocida: true });
   });
 
   it('permisos: vale Permissions-Policy o la antigua Feature-Policy', () => {

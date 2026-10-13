@@ -7,22 +7,16 @@
 // conocer el «selector» de cada proveedor) ni DNSSEC.
 
 import type { CapturaDns, CapturaSitio, ConsultaDns, Hallazgo } from '../tipos';
+import { hallazgoDe } from './utiles';
 
-const h = (id: string, resultado: Hallazgo['resultado'], gravedad: Hallazgo['gravedad'], peso: number, datos?: Hallazgo['datos']): Hallazgo => ({
-  id,
-  categoria: 'dns',
-  resultado,
-  gravedad,
-  peso,
-  ...(datos ? { datos } : {}),
-});
+const h = hallazgoDe('dns');
 
-/** Qué hace el registro SPF con lo que no está en su lista, por su último «all». */
+/** Qué hace el registro SPF con lo que no está en su lista, según su primer «all» (el primer mecanismo que encaja gana; lo que va detrás no se evalúa). */
 export type PoliticaSpf = '-all' | '~all' | '?all' | '+all' | 'sin-all' | 'redirect';
 
 export function politicaSpf(registro: string): PoliticaSpf {
   const todos = [...registro.matchAll(/(?:^|\s)([+\-~?]?)all(?=\s|$)/gi)];
-  if (todos.length > 0) return `${todos[todos.length - 1][1] || '+'}all` as PoliticaSpf;
+  if (todos.length > 0) return `${todos[0][1] || '+'}all` as PoliticaSpf;
   return /(?:^|\s)redirect=/i.test(registro) ? 'redirect' : 'sin-all';
 }
 

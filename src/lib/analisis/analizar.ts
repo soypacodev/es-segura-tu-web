@@ -52,6 +52,8 @@ export interface DependenciasAnalisis {
   alProgreso?: (evento: EventoProgreso) => void;
 }
 
+const AMBIGUOS: ReadonlySet<string> = new Set(['tiempo-agotado', 'redirecciones', 'respuesta-invalida']);
+
 /**
  * Cuando no hay forma de ver la web, no se pone nota: un «F» por una web
  * que no existe o que no responde sería engañoso.
@@ -62,6 +64,9 @@ function noAnalizable(https: ResultadoCaptura, http: ResultadoCaptura): ErrorAna
       return { codigo: 'destino-no-permitido', detalle: captura.error.mensaje };
     }
   }
+  // Un plazo agotado, un bucle de redirecciones o una respuesta ininteligible no demuestran que la web no
+  // tenga HTTPS: pueden ser lentitud, o un cortafuegos que bloquea a los analizadores. Eso no merece una «F».
+  if (!https.ok && AMBIGUOS.has(https.error.codigo)) return { codigo: 'sin-respuesta', detalle: https.error.mensaje };
   if (!https.ok && !http.ok) {
     return https.error.codigo === 'dns'
       ? { codigo: 'no-existe', detalle: https.error.mensaje }
@@ -74,6 +79,8 @@ function avisosDe(captura: CapturaSitio, maxBytes: number): Aviso[] {
   if (!captura.https.ok) return [];
   const r = captura.https.respuesta;
   const avisos: Aviso[] = [];
+  // Una página de error o de bloqueo (403, 429, 503…) no es la web: sus cabeceras no dicen cómo está configurada.
+  if (r.estado >= 400) avisos.push({ id: 'respuesta.error', datos: { estado: r.estado } });
   if (r.estadoCuerpo === 'recortado') avisos.push({ id: 'cuerpo.recortado', datos: { maxBytes } });
   if (r.estadoCuerpo === 'interrumpido') avisos.push({ id: 'cuerpo.interrumpido', datos: { bytesLeidos: r.bytesLeidos } });
   try {

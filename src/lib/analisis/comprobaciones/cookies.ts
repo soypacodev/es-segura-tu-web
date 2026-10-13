@@ -5,6 +5,7 @@
 // atributos: el valor de una cookie nunca sale de aquí.
 
 import type { CapturaSitio, Hallazgo } from '../tipos';
+import { MAX_NOMBRES, hallazgoDe } from './utiles';
 
 export interface Cookie {
   nombre: string;
@@ -15,7 +16,7 @@ export interface Cookie {
 }
 
 /** Nombres que suelen identificar una sesión o un acceso: esas son las que importa proteger del JavaScript. */
-const NOMBRE_DE_SESION = /(sess|sid\b|auth|token|login|logged_in|jwt|csrf|xsrf)/i;
+const NOMBRE_DE_SESION = /(sess|sid\b|auth|token|login|logged_in|jwt)/i;
 
 export function parsearSetCookie(valor: string): Cookie | null {
   const [par, ...atributos] = valor.split(';');
@@ -43,22 +44,21 @@ export function parsearSetCookie(valor: string): Cookie | null {
   return { nombre, secure, httpOnly, sameSite };
 }
 
-export const esCookieDeSesion = (c: Cookie) => NOMBRE_DE_SESION.test(c.nombre);
+/** Las cookies de protección CSRF/XSRF (csrftoken, XSRF-TOKEN…) tienen que poder leerse desde JavaScript: no se les exige «HttpOnly». */
+const NOMBRE_DE_CSRF = /csrf|xsrf/i;
 
-const h = (id: string, resultado: Hallazgo['resultado'], gravedad: Hallazgo['gravedad'], peso: number, datos?: Hallazgo['datos']): Hallazgo => ({
-  id,
-  categoria: 'cookies',
-  resultado,
-  gravedad,
-  peso,
-  ...(datos ? { datos } : {}),
-});
+export const esCookieDeSesion = (c: Cookie) => NOMBRE_DE_SESION.test(c.nombre) && !NOMBRE_DE_CSRF.test(c.nombre);
 
-const MAX_NOMBRES = 5;
+const h = hallazgoDe('cookies');
+
+const MAX_NOMBRE = 60;
+
+/** Un nombre de cookie hostil puede ser enorme: se muestra recortado, y el recorte se ve («…»). */
+const acortar = (nombre: string) => (nombre.length > MAX_NOMBRE ? `${nombre.slice(0, MAX_NOMBRE)}…` : nombre);
 
 /** Los primeros nombres y, si hay más, cuántos quedan sin listar (nunca se recorta sin decirlo). */
 function nombres(cookies: Cookie[]): { sin: string[]; mas?: number } {
-  const unicos = [...new Set(cookies.map((c) => c.nombre))];
+  const unicos = [...new Set(cookies.map((c) => c.nombre))].map(acortar);
   return unicos.length > MAX_NOMBRES ? { sin: unicos.slice(0, MAX_NOMBRES), mas: unicos.length - MAX_NOMBRES } : { sin: unicos };
 }
 
