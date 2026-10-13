@@ -18,8 +18,13 @@ export const AUTOR = {
   foto: '/paco-lopez.jpg',
   correo: 'soypacodev@gmail.com',
   github: 'https://github.com/soypacodev',
-  /** Otros proyectos (el portfolio, cuando exista, va el primero). */
+  /** Otros proyectos (el portfolio va el primero). */
   enlaces: [
+    {
+      nombre: 'Portfolio',
+      descripcion: 'Mis trabajos, servicios y cómo contactar conmigo',
+      url: 'https://soypacodev.vercel.app',
+    },
     {
       nombre: 'Ovillo & Co.',
       descripcion: 'Tienda online de demostración: catálogo, pago con Stripe, cuentas y panel del dueño',

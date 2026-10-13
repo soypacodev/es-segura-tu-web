@@ -166,5 +166,6 @@ Lo hice yo, **Paco López**, desarrollador full-stack: webs y apps seguras para 
 
 Otros proyectos:
 
+- [**Portfolio**](https://soypacodev.vercel.app): mis trabajos, servicios y cómo contactar conmigo.
 - [**Ovillo & Co.**](https://github.com/soypacodev/ovillo-co) · [demo](https://ovillo-co.vercel.app): tienda online de demostración con catálogo, pago con Stripe, cuentas y panel del dueño.
 - [**Cachivache**](https://github.com/soypacodev/cachivache): limpiador de disco para Windows que explica qué va a borrar y por qué.
