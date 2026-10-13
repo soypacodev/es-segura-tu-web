@@ -208,7 +208,8 @@ export function InformeVisual({ informe, arreglados, alAlternar, alMarcarVarios,
           El recorrido de tu web
         </h2>
         <p className="seccion__texto">
-          Esto es lo que pasa desde que alguien escribe tu dirección hasta que se guardan sus cookies. Cambia según marques «Lo arreglaría».
+          Esto es lo que pasa desde que alguien escribe tu dirección hasta que se guardan sus cookies.
+          <span className="no-imprimir"> Cambia según marques «Lo arreglaría».</span>
         </p>
         <Recorrido hallazgos={hallazgos} arreglados={arreglados} />
       </section>
@@ -264,7 +265,7 @@ export function InformeVisual({ informe, arreglados, alAlternar, alMarcarVarios,
         <h2 id="titulo-todo" className="seccion__titulo">
           Todo lo que hemos revisado
         </h2>
-        <p className="seccion__texto">
+        <p className="seccion__texto no-imprimir">
           Pulsa en cualquiera para ver qué significa y cómo se arregla.{urgentes.length > 0 && ' Lo que ya aparece arriba se marca allí.'}
         </p>
         {grupos.map((g) => (

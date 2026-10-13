@@ -1407,8 +1407,17 @@ html:has(.barra-simulador) {
     --tinta-suave: #4a5573;
     --linea: #d3dae6;
     --accion: #1a3fc4;
-    --panel: #101a33;
-    --panel-2: #1b2748;
+    /* En papel el panel va en claro: un bloque azul noche de dos páginas gasta mucha tinta y se lee peor. */
+    --panel: #ffffff;
+    --panel-2: #e3e8f0;
+    --panel-texto: #101a33;
+    --panel-suave: #4a5573;
+    --panel-nota-aplus: #13795b;
+    --panel-nota-a: #2e9e5b;
+    --panel-nota-b: #6f9a1f;
+    --panel-nota-c: #b88a00;
+    --panel-nota-d: #d0601a;
+    --panel-nota-f: #d3362b;
     --nota-aplus: #13795b;
     --nota-a: #2e9e5b;
     --nota-b: #8db82e;
@@ -1504,7 +1513,8 @@ html:has(.barra-simulador) {
     break-after: avoid;
   }
 
-  .panel-nota {
+  /* El panel no se fuerza a una sola página: es más alto que el hueco que queda bajo la cabecera. Sí cada fila. */
+  .categorias > div {
     break-inside: avoid;
   }
 
