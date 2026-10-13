@@ -3,6 +3,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { Informe } from '@/lib/analisis/analizar';
 import type { Categoria, Hallazgo, Resultado } from '@/lib/analisis/tipos';
+import { primeraFrase } from '@/lib/frases';
 import { colorDeLetra } from '@/lib/notas';
 import { ordenarPorUrgencia, sePuedeArreglar, simular } from '@/lib/simulacion';
 import { CATEGORIAS, GRAVEDAD, VEREDICTO, textoDeAviso, textoDeHallazgo, textoDeTecho } from '@/lib/textos/es';
@@ -20,11 +21,6 @@ interface Props {
 }
 
 const ORDEN_RESULTADO: Record<Resultado, number> = { fallo: 0, mejorable: 1, correcto: 2, 'no-aplica': 3 };
-
-function primeraFrase(texto: string): string {
-  const corte = texto.search(/[.!?](\s|$)/);
-  return corte === -1 ? texto : texto.slice(0, corte + 1);
-}
 
 function CasillaSimula({ hallazgo, marcado, alternar }: { hallazgo: Hallazgo; marcado: boolean; alternar: (id: string) => void }) {
   const nombre = textoDeHallazgo(hallazgo).titulo;

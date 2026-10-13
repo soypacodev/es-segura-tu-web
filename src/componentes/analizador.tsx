@@ -1,7 +1,8 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Informe } from '@/lib/analisis/analizar';
+import { textoDeEspera } from '@/lib/frases';
 import { crearLector } from '@/lib/leer-flujo';
 import type { Evento } from '@/lib/protocolo';
 import { simular } from '@/lib/simulacion';
@@ -25,11 +26,15 @@ const DURACION_MINIMA_MS = 1600;
 const esperar = (ms: number) => new Promise<void>((r) => window.setTimeout(r, ms));
 
 function errorDeRespuesta(cuerpo: unknown): { titulo: string; texto?: string } {
-  const error = (cuerpo as { error?: { codigo?: string; motivo?: string } } | null)?.error;
+  const error = (cuerpo as { error?: { codigo?: string; motivo?: string; reintentarEnSeg?: number } } | null)?.error;
   if (error?.codigo === 'objetivo-invalido') {
-    return { titulo: ERRORES_OBJETIVO[error.motivo as MotivoObjetivo] ?? ERRORES_OBJETIVO['host-invalido'] };
+    const motivo = error.motivo;
+    return { titulo: motivo !== undefined && Object.hasOwn(ERRORES_OBJETIVO, motivo) ? ERRORES_OBJETIVO[motivo as MotivoObjetivo] : ERRORES_OBJETIVO['host-invalido'] };
   }
-  if (error?.codigo && error.codigo in ERRORES_PETICION) return { titulo: ERRORES_PETICION[error.codigo] };
+  if (error?.codigo !== undefined && Object.hasOwn(ERRORES_PETICION, error.codigo)) {
+    const espera = typeof error.reintentarEnSeg === 'number' ? { texto: `Puedes volver a intentarlo ${textoDeEspera(error.reintentarEnSeg)}.` } : {};
+    return { titulo: ERRORES_PETICION[error.codigo], ...espera };
+  }
   return { titulo: 'Algo ha fallado', texto: 'Inténtalo de nuevo en unos segundos.' };
 }
 
@@ -37,6 +42,9 @@ export function Analizador() {
   const [estado, setEstado] = useState<Estado>({ fase: 'espera' });
   const [arreglados, setArreglados] = useState<ReadonlySet<string>>(new Set());
   const cancelar = useRef<AbortController | null>(null);
+
+  // Si se sale de la página a mitad de un análisis, se corta la conexión en vez de dejarla abierta.
+  useEffect(() => () => cancelar.current?.abort(), []);
 
   const analizar = useCallback(async (direccion: string) => {
     cancelar.current?.abort();
@@ -100,9 +108,8 @@ export function Analizador() {
         const texto = ERRORES_ANALISIS[final.error.codigo];
         setEstado({ fase: 'error', ...(texto ?? { titulo: 'No hemos podido revisar esa web', texto: 'Inténtalo de nuevo más tarde.' }) });
       }
-    } catch (fallo) {
+    } catch {
       if (control.signal.aborted) return;
-      void fallo;
       setEstado({ fase: 'error', titulo: 'No hemos podido conectar', texto: 'Comprueba tu conexión e inténtalo de nuevo.' });
     }
   }, []);

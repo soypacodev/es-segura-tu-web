@@ -4,7 +4,7 @@ import { PARADAS_TEXTO, textoDeEstadoParada } from '@/lib/textos/es';
 import { IconoEstado } from './icono-estado';
 
 /**
- * Las cinco paradas de una visita, de la dirección a las cookies. La
+ * Las seis paradas de una visita, de la dirección a las cookies. La
  * «tubería» entre paradas se corta con trazo discontinuo cuando la parada
  * anterior tiene algo que arreglar. El estado se dice con texto además de
  * con color e icono.
