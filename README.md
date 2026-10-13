@@ -1,5 +1,7 @@
 # ¿Es segura tu web?
 
+**Pruébalo:** [es-segura-tu-web.vercel.app](https://es-segura-tu-web.vercel.app)
+
 Analizador gratuito de seguridad web. Pegas la dirección de una página y recibes, en segundos, una **nota de la A+ a la F** y un informe en lenguaje llano: qué falla, por qué importa y cómo se arregla.
 
 Es un análisis **pasivo**: equivale a visitar la página con un navegador (una o dos peticiones normales). No ataca ni prueba contraseñas. Solo si la persona marca que es responsable de la web (o tiene permiso) se hace además una comprobación de archivos expuestos: una lista fija de 17 rutas, sin guardar ni mostrar nunca su contenido.
