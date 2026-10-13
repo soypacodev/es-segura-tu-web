@@ -17,10 +17,15 @@
     "node": ">=22.18"
   },
   "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:vigilar": "vitest",
-    "analizar": "tsx scripts/analizar.ts"
+    "analizar": "tsx scripts/analizar.ts",
+    "verificar": "npm run lint && npm run typecheck && npm test && npm run build"
   },
   "dependencies": {
     "@fontsource-variable/atkinson-hyperlegible-next": "^5.3.0",
