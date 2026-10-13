@@ -11,7 +11,7 @@ export interface EnlaceAutor {
 
 export const AUTOR = {
   nombre: 'Paco López',
-  titular: 'Programador freelance',
+  titular: 'Desarrollador full-stack',
   descripcion:
     'Hago webs y aplicaciones a medida para pequeños negocios, y me encargo de que sean seguras, rápidas y fáciles de mantener. Esta herramienta es gratuita; si quieres que alguien arregle lo que aparece en tu informe, escríbeme.',
   correo: 'soypacodev@gmail.com',

@@ -80,4 +80,11 @@ Más detalle en [docs/ARQUITECTURA.md](docs/ARQUITECTURA.md).
 
 ## Autor
 
-Paco López · [soypacodev](https://github.com/soypacodev) · Licencia MIT.
+Paco López, desarrollador full-stack: webs y apps seguras para pequeños negocios. [soypacodev](https://github.com/soypacodev) · soypacodev@gmail.com
+
+Otros proyectos:
+
+- [Ovillo & Co.](https://github.com/soypacodev/ovillo-co): tienda online de demostración con catálogo, pago con Stripe, cuentas y panel del dueño ([web](https://ovillo-co.vercel.app)).
+- [Cachivache](https://github.com/soypacodev/cachivache): limpiador de disco para Windows que explica qué va a borrar y por qué.
+
+Licencia MIT.
